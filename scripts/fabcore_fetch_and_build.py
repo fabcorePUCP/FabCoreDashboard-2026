@@ -76,13 +76,13 @@ NODOS       = ["Fab1-Aditiva", "Fab2-Bioimpresión", "Fab3-Digital", "Fab4-Const
 # ─── 1. Autenticación y lectura desde Google Sheets ─────────────────────────
 
 def get_spreadsheet() -> gspread.Spreadsheet:
-    #raw = os.environ.get("GOOGLE_CREDENTIALS")
-    #if not raw:
-    #    sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
-    #creds_dict = json.loads(raw)
-    #creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    CREDS_FILE = 'credentials.json'
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+    raw = os.environ.get("GOOGLE_CREDENTIALS")
+    if not raw:
+        sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
+    creds_dict = json.loads(raw)
+    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    #CREDS_FILE = 'credentials.json'
+    #creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open_by_key(SPREADSHEET_ID)
 
