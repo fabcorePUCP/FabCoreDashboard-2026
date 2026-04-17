@@ -56,6 +56,11 @@ jobs:
           # SPREADSHEET_ID: "1fSygIV3AmxzHOil6b-PgZ5_LO73nyrM87YrtL02rRuo"
         run: python scripts/fabcore_fetch_and_build.py
 
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/
+          
   # ── Job 2: Deploy a GitHub Pages ─────────────────────────────────────────────
   deploy:
     needs: build
