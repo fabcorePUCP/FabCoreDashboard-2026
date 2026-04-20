@@ -6,53 +6,85 @@
 <title>Fabcore — Dashboard de Métricas 2026</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
-  :root {
-    --bg:#0f172a; --card:#1e293b; --border:#334155;
-    --text:#e2e8f0; --muted:#94a3b8;
-    --fab1:#3b82f6; --fab2:#10b981; --fab3:#f59e0b; --fab4:#ef4444;
-    --accent:#6366f1;
+  :root{
+    --bg:#0f172a;--card:#1e293b;--border:#334155;
+    --text:#e2e8f0;--muted:#94a3b8;
+    --fab1:#3b82f6;--fab2:#10b981;--fab3:#f59e0b;--fab4:#ef4444;--accent:#6366f1;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;}
-  header{padding:24px 32px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;}
+
+  header{padding:22px 32px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;}
   .logo{width:44px;height:44px;border-radius:10px;flex-shrink:0;background:linear-gradient(135deg,var(--fab1),var(--accent));display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;color:#fff;}
-  header h1{font-size:1.35rem;font-weight:700;}
-  header p{color:var(--muted);font-size:.82rem;margin-top:3px;}
-  .filters{padding:14px 32px;display:flex;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--border);align-items:flex-end;}
-  .filters label{font-size:.78rem;color:var(--muted);display:flex;flex-direction:column;gap:4px;}
-  .filters select{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:7px 11px;font-size:.85rem;cursor:pointer;min-width:160px;}
+  header h1{font-size:1.3rem;font-weight:700;}
+  header p{color:var(--muted);font-size:.81rem;margin-top:3px;}
+
+  .filters{padding:12px 32px;display:flex;gap:14px;flex-wrap:wrap;border-bottom:1px solid var(--border);align-items:flex-end;}
+  .filters label{font-size:.77rem;color:var(--muted);display:flex;flex-direction:column;gap:4px;}
+  .filters select{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.84rem;cursor:pointer;min-width:155px;}
   .filters select:focus{outline:none;border-color:var(--accent);}
-  #lastUpdate{margin-left:auto;font-size:.75rem;color:var(--muted);align-self:center;}
-  main{padding:24px 32px;}
+  #lastUpdate{margin-left:auto;font-size:.74rem;color:var(--muted);align-self:center;}
+
+  main{padding:22px 32px;}
+
+  /* loading */
   #loading{display:flex;flex-direction:column;align-items:center;justify-content:center;height:300px;gap:14px;color:var(--muted);font-size:.9rem;}
   .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
   @keyframes spin{to{transform:rotate(360deg)}}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:16px;margin-bottom:28px;}
-  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px 22px;border-top:3px solid var(--accent);}
-  .kpi .lbl{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
-  .kpi .val{font-size:2.4rem;font-weight:800;margin:6px 0 2px;line-height:1;}
-  .kpi .sub{font-size:.76rem;color:var(--muted);}
-  .kpi.c1{border-top-color:var(--fab1);} .kpi.c2{border-top-color:var(--fab2);}
-  .kpi.c3{border-top-color:var(--fab3);} .kpi.c4{border-top-color:var(--fab4);}
-  .nodos{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:28px;}
-  .nodo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
-  .nodo-card .nname{font-size:.9rem;font-weight:600;margin-bottom:8px;}
-  .nodo-card .nvals{display:flex;gap:18px;font-size:.76rem;color:var(--muted);}
-  .nodo-card .nvals span b{display:block;color:var(--text);font-size:1.15rem;font-weight:700;}
-  .nodo-card.n1{border-left:3px solid var(--fab1);} .nodo-card.n2{border-left:3px solid var(--fab2);}
-  .nodo-card.n3{border-left:3px solid var(--fab3);} .nodo-card.n4{border-left:3px solid var(--fab4);}
-  .stitle{margin:28px 0 14px;font-size:.8rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;}
-  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(400px,1fr));gap:20px;}
-  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:22px;}
-  .chart-card h3{font-size:.76rem;color:var(--muted);margin-bottom:14px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
-  .chart-card canvas{max-height:260px;}
+
+  /* KPIs */
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(162px,1fr));gap:14px;margin-bottom:24px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px 20px;border-top:3px solid var(--accent);}
+  .kpi .lbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;}
+  .kpi .val{font-size:2.2rem;font-weight:800;margin:5px 0 2px;line-height:1;}
+  .kpi .sub{font-size:.74rem;color:var(--muted);}
+  .kpi.c1{border-top-color:var(--fab1);}.kpi.c2{border-top-color:var(--fab2);}
+  .kpi.c3{border-top-color:var(--fab3);}.kpi.c4{border-top-color:var(--fab4);}
+  .kpi.ca{border-top-color:#8b5cf6;}.kpi.cb{border-top-color:#06b6d4;}
+  .kpi.cc{border-top-color:#ec4899;}.kpi.cd{border-top-color:#f97316;}
+
+  /* Nodo cards */
+  .nodos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px;}
+  .nodo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .nodo-card .nname{font-size:.88rem;font-weight:600;margin-bottom:7px;}
+  .nodo-card .nvals{display:flex;gap:14px;font-size:.74rem;color:var(--muted);flex-wrap:wrap;}
+  .nodo-card .nvals span b{display:block;color:var(--text);font-size:1.1rem;font-weight:700;}
+  .nodo-card.n1{border-left:3px solid var(--fab1);}.nodo-card.n2{border-left:3px solid var(--fab2);}
+  .nodo-card.n3{border-left:3px solid var(--fab3);}.nodo-card.n4{border-left:3px solid var(--fab4);}
+
+  /* Section */
+  .stitle{margin:26px 0 13px;font-size:.78rem;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.08em;display:flex;align-items:center;gap:8px;}
+  .stitle::after{content:'';flex:1;height:1px;background:var(--border);}
+
+  /* Charts */
+  .charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(390px,1fr));gap:18px;}
+  .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
+  .chart-card h3{font-size:.74rem;color:var(--muted);margin-bottom:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
+  .chart-card canvas{max-height:255px;}
   .wide{grid-column:1/-1;}
-  .table-wrap{overflow-x:auto;margin-top:4px;}
-  table{width:100%;border-collapse:collapse;font-size:.82rem;}
-  th{padding:8px 12px;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;font-size:.72rem;text-transform:uppercase;}
-  td{padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.04);}
+
+  /* Tables */
+  .table-wrap{overflow-x:auto;margin-top:4px;max-height:340px;overflow-y:auto;}
+  table{width:100%;border-collapse:collapse;font-size:.8rem;}
+  th{padding:7px 11px;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;font-size:.7rem;text-transform:uppercase;position:sticky;top:0;background:var(--card);z-index:1;}
+  td{padding:7px 11px;border-bottom:1px solid rgba(255,255,255,.04);}
   tr:last-child td{border-bottom:none;} tr:hover td{background:rgba(255,255,255,.025);}
-  @media(max-width:640px){main,.filters,header{padding-left:14px;padding-right:14px;}.charts{grid-template-columns:1fr;}.wide{grid-column:unset;}}
+
+  /* Badge */
+  .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:600;}
+  /* Tabs material */
+  .tab-btn{background:var(--card);color:var(--muted);border:1px solid var(--border);border-radius:8px;padding:5px 14px;font-size:.8rem;cursor:pointer;font-weight:600;transition:all .15s;}
+  .tab-btn:hover{color:var(--text);border-color:var(--accent);}
+  .tab-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+  /* Bar dentro de tabla */
+  .mat-bar{display:inline-block;height:6px;border-radius:3px;vertical-align:middle;margin-right:6px;}
+  .badge-green{background:#10b98120;color:#10b981;}.badge-blue{background:#3b82f620;color:#3b82f6;}
+  .badge-amber{background:#f59e0b20;color:#f59e0b;}.badge-purple{background:#8b5cf620;color:#8b5cf6;}
+
+  @media(max-width:640px){
+    main,.filters,header{padding-left:14px;padding-right:14px;}
+    .charts{grid-template-columns:1fr;}.wide{grid-column:unset;}
+  }
 </style>
 </head>
 <body>
@@ -60,7 +92,7 @@
 <header>
   <div class="logo">FC</div>
   <div>
-    <h1>Fabcore — Dashboard de Métricas</h1>
+    <h1>Fabcore — Dashboard de Métricas 2026</h1>
     <p id="headerSub">Cargando datos…</p>
   </div>
 </header>
@@ -74,156 +106,393 @@
 <main>
   <div id="loading"><div class="spinner"></div><span>Cargando métricas…</span></div>
   <div id="dashboard" style="display:none">
+
+    <!-- ── KPIs principales ── -->
     <div class="kpis" id="kpis"></div>
+
+    <!-- ── Por nodo ── -->
     <div class="stitle">Por Nodo</div>
     <div class="nodos" id="nodos"></div>
+
+    <!-- ── Evolución mensual ── -->
     <div class="stitle">Evolución Mensual</div>
     <div class="charts">
       <div class="chart-card wide"><h3>Alumnos asistidos por mes y nodo</h3><canvas id="cMesNodo"></canvas></div>
     </div>
+
+    <!-- ── Distribución general ── -->
     <div class="stitle">Distribución</div>
     <div class="charts">
       <div class="chart-card"><h3>Atenciones por servicio</h3><canvas id="cServicio"></canvas></div>
       <div class="chart-card"><h3>Capacitaciones por tipo</h3><canvas id="cCap"></canvas></div>
-      <div class="chart-card"><h3>Top carreras — alumnos asistidos</h3><canvas id="cCarreras"></canvas></div>
+      <div class="chart-card"><h3>Top 8 carreras — alumnos asistidos</h3><canvas id="cCarreras"></canvas></div>
       <div class="chart-card"><h3>Tiempo de uso por nodo (minutos)</h3><canvas id="cTiempo"></canvas></div>
     </div>
-    <div class="stitle">Docentes Apoyados</div>
-    <div class="chart-card">
-      <h3>Listado de docentes</h3>
+
+    <!-- ── Convenios de curso ── -->
+    <div class="stitle">Convenios de Curso por Nodo</div>
+    <div class="charts">
+      <div class="chart-card"><h3>Convenios por nodo</h3><canvas id="cConvenios"></canvas></div>
+      <div class="chart-card wide">
+        <h3>Cursos con convenio establecido</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Código</th><th>Nombre del curso</th><th>Nodo</th><th>Fecha convenio</th><th>Notas</th></tr></thead>
+            <tbody id="tbConvenios"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Material por curso ── -->
+    <div class="stitle">Material Empleado (PLA y Resina)</div>
+    <div class="charts">
+      <div class="chart-card"><h3>Material por tipo de registro</h3><canvas id="cMatTipoReg"></canvas></div>
+      <div class="chart-card"><h3>PLA vs Resina — distribución global</h3><canvas id="cMatTipo"></canvas></div>
+      <div class="chart-card"><h3>Material por nodo <span id="matNodoUnit" style="color:#6366f1"></span></h3><canvas id="cMatNodo"></canvas></div>
+    </div>
+    <div class="chart-card wide" style="margin-top:18px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
+        <h3 style="margin:0">Desglose por curso · proyecto · tesis</h3>
+        <div style="display:flex;gap:6px" id="matTabs">
+          <button class="tab-btn active" data-tab="cursos">Cursos</button>
+          <button class="tab-btn" data-tab="proyectos">Proyectos</button>
+          <button class="tab-btn" data-tab="tesis">Tesis</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Nombre</th><th>Carrera</th><th>Curso</th><th>Nodo</th><th>Apoyo brindado</th></tr></thead>
-          <tbody id="tbDocentes"></tbody>
+          <thead><tr><th>#</th><th>Código</th><th>Nombre</th><th style="text-align:right">PLA</th><th style="text-align:right">Resina</th><th style="text-align:right">Total</th></tr></thead>
+          <tbody id="tbMaterial"></tbody>
         </table>
       </div>
     </div>
-  </div>
+
+    <!-- ── Atenciones docentes / JP ── -->
+    <div class="stitle">Atenciones a Docentes y Jefes de Práctica</div>
+    <div class="charts">
+      <div class="chart-card"><h3>Atenciones por tipo y mes</h3><canvas id="cDocJPMes"></canvas></div>
+      <div class="chart-card"><h3>Distribución por nodo</h3><canvas id="cDocJPNodo"></canvas></div>
+    </div>
+
+    <!-- ── Docentes vinculados ── -->
+    <div class="stitle">Docentes Vinculados</div>
+    <div class="kpis" id="kpisDocentes"></div>
+    <div class="charts" style="margin-top:14px">
+      <div class="chart-card"><h3>Docentes por nodo</h3><canvas id="cDocNodo"></canvas></div>
+      <div class="chart-card"><h3>Top carreras docentes</h3><canvas id="cDocCarrera"></canvas></div>
+      <div class="chart-card wide">
+        <h3>Listado de docentes vinculados</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Nombre</th><th>Carrera</th><th>Curso</th><th>Nodo</th><th>Tipo de apoyo</th><th>Descripción</th></tr></thead>
+            <tbody id="tbDocentes"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /dashboard -->
 </main>
 
 <script>
-const DATA_URL="data/metrics.json";
-const NODO_COLOR={"Fab1-Aditiva":"#3b82f6","Fab2-Bioimpresión":"#10b981","Fab3-Digital":"#f59e0b","Fab4-Construcción":"#ef4444","Sin asignar":"#6b7280"};
-const NODO_CLASS={"Fab1-Aditiva":"n1","Fab2-Bioimpresión":"n2","Fab3-Digital":"n3","Fab4-Construcción":"n4"};
-const PALETTE=["#6366f1","#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899"];
-const MESES_ORDER=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-let METRICS=null, charts={};
-const $=id=>document.getElementById(id);
-const gc=()=>({color:"rgba(255,255,255,.06)"});
-const tc=(sz=11)=>({color:"#94a3b8",font:{size:sz}});
-const lc=()=>({labels:{color:"#e2e8f0",font:{size:11},boxWidth:12}});
+const DATA_URL = "data/metrics.json";
 
-function mkChart(id,cfg){
-  if(charts[id])charts[id].destroy();
-  charts[id]=new Chart($(id).getContext("2d"),cfg);
-}
+const NODO_COLOR = {
+  "Fab1-Aditiva":"#3b82f6","Fab2-Bioimpresión":"#10b981",
+  "Fab3-Digital":"#f59e0b","Fab4-Construcción":"#ef4444","Sin asignar":"#6b7280"
+};
+const NODO_CLASS = {
+  "Fab1-Aditiva":"n1","Fab2-Bioimpresión":"n2","Fab3-Digital":"n3","Fab4-Construcción":"n4"
+};
+const PALETTE = ["#6366f1","#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#f97316","#14b8a6"];
+const MAT_COLOR = {"PLA":"#3b82f6","Resina 1":"#10b981","Resina Estandar":"#6366f1","PETG":"#f59e0b","TPU":"#ec4899","OTROS":"#6b7280","NINGUNO":"#334155"};
+const MESES_ORDER = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
 
-async function fetchMetrics(){
+let M = null, charts = {};
+const $ = id => document.getElementById(id);
+const gc = () => ({color:"rgba(255,255,255,.06)"});
+const tc = (sz=11) => ({color:"#94a3b8",font:{size:sz}});
+const lc = () => ({labels:{color:"#e2e8f0",font:{size:11},boxWidth:12}});
+
+function mk(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($(id).getContext("2d"),cfg); }
+
+async function load(){
   try{
-    const res=await fetch(DATA_URL+"?v="+Date.now());
-    if(!res.ok)throw new Error("HTTP "+res.status);
-    return await res.json();
+    const r = await fetch(DATA_URL+"?v="+Date.now());
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    return await r.json();
   }catch(e){
     $("loading").innerHTML=`<div style="color:#ef4444;text-align:center">
       <b>No se pudo cargar metrics.json</b><br><small>${e.message}</small><br><br>
-      <small style="color:#64748b">Asegúrate de que el worker haya generado <code>docs/data/metrics.json</code></small>
+      <small style="color:#64748b">El worker debe generar <code>docs/data/metrics.json</code></small>
     </div>`;
     return null;
   }
 }
 
-function render(nodo,mes){
-  const m=METRICS;
-  const nodos=m.resumen.nodos||Object.keys(NODO_COLOR).slice(0,4);
+function render(nodo, mes){
+  const m = M;
+  const nodos = m.resumen.nodos || Object.keys(NODO_COLOR).slice(0,4);
 
-  // KPIs
-  let alumnos,atenciones,docentes,cap;
-  if(nodo==="todos"&&mes==="todos"){
-    alumnos=m.alumnos_asistidos.total; atenciones=m.atenciones.total;
-    docentes=m.docentes_apoyados.total; cap=m.capacitaciones.alumnos_unicos;
-  }else{
-    const f=rows=>{let r=rows;if(nodo!=="todos")r=r.filter(x=>x.Nodo===nodo);if(mes!=="todos")r=r.filter(x=>x.MesNombre===mes);return r;};
-    alumnos=f(m.alumnos_asistidos.por_mes_nodo).reduce((s,r)=>s+r.alumnos,0);
-    atenciones=f(m.atenciones.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
-    docentes=m.docentes_apoyados.total;
-    cap=mes!=="todos"?(m.capacitaciones.alumnos_unicos_por_mes[mes]||0):m.capacitaciones.alumnos_unicos;
-  }
+  // ── KPIs globales ──────────────────────────────────────────────────────────
+  const f = rows=>{let r=rows;if(nodo!=="todos")r=r.filter(x=>x.Nodo===nodo);if(mes!=="todos")r=r.filter(x=>x.MesNombre===mes);return r;};
+  const alumnos    = (nodo==="todos"&&mes==="todos") ? m.alumnos_asistidos.total
+    : f(m.alumnos_asistidos.por_mes_nodo).reduce((s,r)=>s+r.alumnos,0);
+  const atenciones = (nodo==="todos"&&mes==="todos") ? m.atenciones.total
+    : f(m.atenciones.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
+  const atenciones_doc_jp = (nodo==="todos"&&mes==="todos") ? m.atenciones_doc_jp.total_registros
+    : f(m.atenciones_doc_jp.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
+  const convenios = (nodo!=="todos") ? (m.convenios.por_nodo[nodo]||0) : m.convenios.total;
+  const docentes_vinculados = (nodo!=="todos") ? (m.docentes_vinculados.por_nodo[nodo]||0) : m.docentes_vinculados.total;
+  const cap = (mes!=="todos") ? (m.capacitaciones.alumnos_unicos_por_mes[mes]||0) : m.capacitaciones.alumnos_unicos;
 
   $("kpis").innerHTML=`
     <div class="kpi c1"><div class="lbl">Alumnos asistidos</div><div class="val">${alumnos}</div><div class="sub">alumnos únicos con atención</div></div>
     <div class="kpi c2"><div class="lbl">Total atenciones</div><div class="val">${atenciones}</div><div class="sub">registros de uso de equipos</div></div>
-    <div class="kpi c3"><div class="lbl">Docentes apoyados</div><div class="val">${docentes}</div><div class="sub">docentes con apoyo registrado</div></div>
-    <div class="kpi c4"><div class="lbl">Alumnos capacitados</div><div class="val">${cap}</div><div class="sub">participantes únicos en CAPs</div></div>`;
+    <div class="kpi c3"><div class="lbl">Alumnos capacitados</div><div class="val">${cap}</div><div class="sub">participantes únicos en CAPs</div></div>
+    <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docentes_vinculados}</div><div class="sub">docentes con apoyo registrado</div></div>
+    <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convenios}</div><div class="sub">cursos con convenio activo</div></div>
+    <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atenciones_doc_jp}</div><div class="sub">${m.atenciones_doc_jp.docentes_unicos} doc · ${m.atenciones_doc_jp.predocentes_unicos} JP únicos</div></div>
+    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(m.material.total_gramos/1000).toFixed(1)}kg</div><div class="sub">${m.material.total_gramos.toLocaleString("es",{maximumFractionDigits:0})} g total</div></div>
+    <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${Math.round(m.tiempo_uso_minutos.total/60)}h</div><div class="sub">horas de uso de equipos</div></div>`;
 
-  // Nodo cards
-  $("nodos").innerHTML=nodos.map(n=>`
+  // ── Nodo cards ─────────────────────────────────────────────────────────────
+  $("nodos").innerHTML = nodos.map(n=>`
     <div class="nodo-card ${NODO_CLASS[n]||''}">
       <div class="nname" style="color:${NODO_COLOR[n]||'#e2e8f0'}">${n}</div>
       <div class="nvals">
         <span><b>${m.alumnos_asistidos.por_nodo[n]||0}</b>alumnos</span>
-        <span><b>${m.atenciones.por_nodo[n]||0}</b>atenciones</span>
+        <span><b>${m.atenciones.por_nodo[n]||0}</b>atenc.</span>
+        <span><b>${m.convenios.por_nodo[n]||0}</b>convenios</span>
+        <span><b>${m.docentes_vinculados.por_nodo[n]||0}</b>docentes</span>
         <span><b>${Math.round((m.tiempo_uso_minutos.por_nodo[n]||0)/60)}h</b>uso</span>
+        ${(m.material.por_nodo[n]||0)>0 ? `<span><b>${n==="Fab4-Construcción" ? ((m.material.por_nodo[n]/1000).toLocaleString("es",{maximumFractionDigits:1})+"kg") : (m.material.por_nodo[n].toLocaleString("es",{maximumFractionDigits:0})+"g")}</b>material</span>` : ""}
       </div>
     </div>`).join("");
 
-  // Chart: alumnos mes × nodo
-  const mesesP=MESES_ORDER.filter(ms=>m.alumnos_asistidos.por_mes[ms]);
-  mkChart("cMesNodo",{type:"bar",data:{labels:mesesP,datasets:nodos.map(n=>({
-    label:n,
-    data:mesesP.map(ms=>{const r=m.alumnos_asistidos.por_mes_nodo.find(d=>d.MesNombre===ms&&d.Nodo===n);return r?r.alumnos:0;}),
+  // ── Alumnos mes × nodo ────────────────────────────────────────────────────
+  const mP = MESES_ORDER.filter(ms=>m.alumnos_asistidos.por_mes[ms]);
+  mk("cMesNodo",{type:"bar",data:{labels:mP,datasets:nodos.map(n=>({
+    label:n, data:mP.map(ms=>{const r=m.alumnos_asistidos.por_mes_nodo.find(d=>d.MesNombre===ms&&d.Nodo===n);return r?r.alumnos:0;}),
     backgroundColor:(NODO_COLOR[n]||"#6b7280")+"cc",borderColor:NODO_COLOR[n]||"#6b7280",borderWidth:1,borderRadius:4
-  }))},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},scales:{x:{grid:gc(),ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+  }))},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
+    scales:{x:{grid:gc(),ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
 
-  // Chart: servicios doughnut
+  // ── Servicios doughnut ────────────────────────────────────────────────────
   const rawSvc={...m.atenciones.por_servicio};
   if(rawSvc["OTROS"]!=null){rawSvc["Otros"]=(rawSvc["Otros"]||0)+rawSvc["OTROS"];delete rawSvc["OTROS"];}
-  mkChart("cServicio",{type:"doughnut",data:{labels:Object.keys(rawSvc),datasets:[{data:Object.values(rawSvc),backgroundColor:PALETTE,borderWidth:0}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{...lc(),position:"right"}}}});
+  mk("cServicio",{type:"doughnut",data:{labels:Object.keys(rawSvc),datasets:[{data:Object.values(rawSvc),backgroundColor:PALETTE,borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{...lc(),position:"right"}}}});
 
-  // Chart: capacitaciones
+  // ── Capacitaciones ────────────────────────────────────────────────────────
   const capE=Object.entries(m.capacitaciones.por_capacitacion);
-  mkChart("cCap",{type:"bar",data:{labels:capE.map(([k])=>k.split(" - ")[1]||k),datasets:[{data:capE.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capE.length),borderWidth:0,borderRadius:6}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc()}}}});
+  mk("cCap",{type:"bar",data:{labels:capE.map(([k])=>k.split(" - ")[1]||k),datasets:[{data:capE.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capE.length),borderWidth:0,borderRadius:6}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc()}}}});
 
-  // Chart: top carreras
+  // ── Top carreras ──────────────────────────────────────────────────────────
   const cMap={};
   Object.entries(m.alumnos_asistidos.por_carrera).filter(([k])=>k!=="Sin carrera").forEach(([k,v])=>{
-    const norm=k.toUpperCase().trim().replace(/INGENIERIA\b/,"INGENIERÍA").replace(/MECANICA\b/,"MECÁNICA").replace(/MECATRONICA\b/,"MECATRÓNICA").replace(/ELECTRONICA\b/,"ELECTRÓNICA");
-    cMap[norm]=(cMap[norm]||0)+v;
+    const n=k.toUpperCase().trim().replace(/INGENIERIA\b/,"INGENIERÍA").replace(/MECATRONICA\b/,"MECATRÓNICA").replace(/ELECTRONICA\b/,"ELECTRÓNICA");
+    cMap[n]=(cMap[n]||0)+v;
   });
   const topC=Object.entries(cMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mkChart("cCarreras",{type:"bar",data:{labels:topC.map(([k])=>k.length>30?k.slice(0,28)+"…":k),datasets:[{data:topC.map(([,v])=>v),backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4}]},options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+  mk("cCarreras",{type:"bar",data:{labels:topC.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:topC.map(([,v])=>v),backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
 
-  // Chart: tiempo por nodo
-  mkChart("cTiempo",{type:"bar",data:{labels:nodos,datasets:[{data:nodos.map(n=>m.tiempo_uso_minutos.por_nodo[n]||0),backgroundColor:nodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:nodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+  // ── Tiempo por nodo ───────────────────────────────────────────────────────
+  mk("cTiempo",{type:"bar",data:{labels:nodos,datasets:[{data:nodos.map(n=>m.tiempo_uso_minutos.por_nodo[n]||0),backgroundColor:nodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:nodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
 
-  // Tabla docentes
-  $("tbDocentes").innerHTML=m.docentes_apoyados.detalle.map(d=>`
+  // ── CONVENIOS ─────────────────────────────────────────────────────────────
+  const convNodos=Object.keys(m.convenios.por_nodo);
+  mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>m.convenios.por_nodo[n]||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
+
+  $("tbConvenios").innerHTML = m.convenios.detalle.map(d=>`
     <tr>
-      <td>${d.Nombre} ${d.Apellido}</td><td>${d.Carrera}</td><td>${d.Curso}</td>
+      <td><code style="color:#94a3b8;font-size:.75rem">${d.CODIGO}</code></td>
+      <td style="font-weight:500">${d.NOMBRE}</td>
+      <td><span style="color:${NODO_COLOR[d.Nodo]||'#94a3b8'}">${d.Nodo}</span></td>
+      <td style="color:#94a3b8">${d.fecha_convenio}</td>
+      <td style="color:#64748b;font-size:.76rem">${d.Notas}</td>
+    </tr>`).join("");
+
+  // ── MATERIAL POR CURSO ─────────────────────────────────────────────────────
+
+  // Helper: formatea un valor en gramos según el nodo.
+  // Fab4 muestra en kg (los valores ya vienen en g desde el worker, convertidos),
+  // el resto en g. Para valores globales (sin nodo) siempre g.
+  const FAB4 = "Fab4-Construcción";
+  function fmtMat(grams, nodo){
+    if(nodo === FAB4) return (grams/1000).toLocaleString("es",{maximumFractionDigits:3}) + " kg";
+    return grams.toLocaleString("es",{maximumFractionDigits:1}) + " g";
+  }
+  // Para tooltips de gráficos sin nodo explícito, siempre g
+  function fmtG(v){ return v.toLocaleString("es",{maximumFractionDigits:1}) + " g"; }
+
+  // Chart 1: barras por tipo de registro (Curso / Proyecto / Tesis) — valores en g
+  const trKeys = Object.keys(m.material.por_tipo_registro);
+  mk("cMatTipoReg",{type:"bar",
+    data:{labels:trKeys,datasets:[{
+      data:trKeys.map(k=>m.material.por_tipo_registro[k]),
+      backgroundColor:["#6366f1cc","#10b981cc","#f59e0bcc"],
+      borderColor:["#6366f1","#10b981","#f59e0b"],
+      borderWidth:1,borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},
+      tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),callback:v=>fmtG(v)},beginAtZero:true}}}});
+
+  // Chart 2: doughnut PLA vs Resina (excluye Otros) — valores en g
+  const matPR = Object.entries(m.material.por_tipo).filter(([k])=>k==="PLA"||k==="Resina");
+  mk("cMatTipo",{type:"doughnut",
+    data:{labels:matPR.map(([k])=>k),datasets:[{data:matPR.map(([,v])=>v),
+      backgroundColor:["#3b82f6","#10b981"],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{...lc(),position:"right"},
+        tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}}}});
+
+  // Chart 3: material por nodo — eje izquierdo g (Fab1/2/3), eje derecho kg (Fab4)
+  // Construimos dos datasets: uno para Fab1-3 (g), otro para Fab4 (kg)
+  const matNodosK = Object.keys(m.material.por_nodo);
+  const matFab4Val = (m.material.por_nodo[FAB4] || 0) / 1000; // → kg para el eje
+  const matNodoLabels = matNodosK.map(n => n === FAB4 ? n + " (kg)" : n);
+  // Separamos en dos datasets para ejes distintos
+  const dsMatG  = { label:"g",  yAxisID:"yG",
+    data: matNodosK.map(n => n===FAB4 ? null : (m.material.por_nodo[n]||0)),
+    backgroundColor: matNodosK.map(n=>n===FAB4?"transparent":(NODO_COLOR[n]||"#6b7280")+"cc"),
+    borderColor:     matNodosK.map(n=>NODO_COLOR[n]||"#6b7280"), borderWidth:1, borderRadius:6 };
+  const dsMatKg = { label:"kg (Fab4)", yAxisID:"yKg",
+    data: matNodosK.map(n => n===FAB4 ? matFab4Val : null),
+    backgroundColor: (NODO_COLOR[FAB4]||"#ef4444")+"cc",
+    borderColor: NODO_COLOR[FAB4]||"#ef4444", borderWidth:1, borderRadius:6 };
+  mk("cMatNodo",{type:"bar",
+    data:{labels:matNodoLabels, datasets:[dsMatG, dsMatKg]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=> ctx.dataset.yAxisID==="yKg"
+          ? " Fab4: "+(ctx.raw).toLocaleString("es",{maximumFractionDigits:3})+" kg"
+          : " "+ctx.label+": "+fmtG(ctx.raw)}}},
+      scales:{
+        x:{grid:{display:false},ticks:tc()},
+        yG: {type:"linear",position:"left", grid:gc(), ticks:{...tc(),callback:v=>v>=1000?(v/1000)+"k g":v+" g"}, beginAtZero:true},
+        yKg:{type:"linear",position:"right",grid:{display:false}, ticks:{...tc(),callback:v=>v+" kg"}, beginAtZero:true}
+      }}});
+  // Actualiza el subtítulo dinámico
+  const unitEl = document.getElementById("matNodoUnit");
+  if(unitEl) unitEl.textContent = "— Fab1/2/3 en g · Fab4 en kg";
+
+  // Tabla con tabs: cursos / proyectos / tesis
+  // Las filas del JSON ya están normalizadas a g (Fab4 se multiplicó ×1000 en el worker).
+  // En la tabla mostramos siempre en g, ya que la tabla es por curso (sin nodo específico).
+  function renderMatTable(tab){
+    const rows = m.material[tab];
+    const maxTotal = rows.length ? Math.max(...rows.map(r=>r.total)) : 1;
+    $("tbMaterial").innerHTML = rows.map((r,i)=>{
+      const pct = v => Math.round((v/maxTotal)*80);
+      const fmt = v => v > 0 ? v.toLocaleString("es",{maximumFractionDigits:1}) : "—";
+      const barPLA    = r.PLA   >0 ? `<span class="mat-bar" style="width:${pct(r.PLA)}px;background:#3b82f6"></span>` : "";
+      const barResina = r.Resina>0 ? `<span class="mat-bar" style="width:${pct(r.Resina)}px;background:#10b981"></span>` : "";
+      return `<tr>
+        <td style="color:#475569;font-size:.75rem;width:28px">${i+1}</td>
+        <td><code style="color:#94a3b8;font-size:.74rem">${r.codigo}</code></td>
+        <td style="font-size:.82rem;font-weight:500">${r.nombre}</td>
+        <td style="text-align:right;white-space:nowrap">${barPLA}<span style="color:#3b82f6">${fmt(r.PLA)} g</span></td>
+        <td style="text-align:right;white-space:nowrap">${barResina}<span style="color:#10b981">${fmt(r.Resina)} g</span></td>
+        <td style="text-align:right;font-weight:600">${fmt(r.total)} g</td>
+      </tr>`;
+    }).join("");
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  }
+
+  renderMatTable("cursos");
+  document.getElementById("matTabs").addEventListener("click", e=>{
+    if(e.target.dataset.tab) renderMatTable(e.target.dataset.tab);
+  });
+
+  // ── ATENCIONES DOC / JP ───────────────────────────────────────────────────
+  const djMeses = MESES_ORDER.filter(ms=>m.atenciones_doc_jp.por_mes[ms]);
+  mk("cDocJPMes",{type:"bar",data:{
+    labels:djMeses,
+    datasets:["DOCENTE","PREDOCENTE"].map((tipo,i)=>({
+      label:tipo,
+      data:djMeses.map(ms=>{const r=m.atenciones_doc_jp.por_mes_tipo.find(d=>d.MesNombre===ms&&d["Tipo de Usuario"]===tipo);return r?r.atenciones:0;}),
+      backgroundColor:[PALETTE[0]+"cc",PALETTE[1]+"cc"][i],
+      borderColor:[PALETTE[0],PALETTE[1]][i],borderWidth:1,borderRadius:4
+    }))
+  },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
+    scales:{x:{grid:gc(),ticks:tc(),stacked:true},y:{grid:gc(),ticks:tc(),beginAtZero:true,stacked:true}}}});
+
+  const djNodos = Object.keys(m.atenciones_doc_jp.por_nodo);
+  mk("cDocJPNodo",{type:"bar",data:{labels:djNodos,datasets:[{data:djNodos.map(n=>m.atenciones_doc_jp.por_nodo[n]),backgroundColor:djNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:djNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+
+  // ── DOCENTES VINCULADOS ───────────────────────────────────────────────────
+  $("kpisDocentes").innerHTML=`
+    <div class="kpi c1"><div class="lbl">Total vinculados</div><div class="val">${m.docentes_vinculados.total}</div><div class="sub">docentes únicos registrados</div></div>
+    <div class="kpi ca"><div class="lbl">Convenio de curso</div><div class="val">${m.docentes_vinculados.convenio}</div><div class="sub">vínculos por convenio</div></div>
+    <div class="kpi c3"><div class="lbl">Asesor de tesis</div><div class="val">${m.docentes_vinculados.asesor_tesis}</div><div class="sub">apoyos de asesoría</div></div>
+    <div class="kpi c2"><div class="lbl">Apoyo a curso</div><div class="val">${m.docentes_vinculados.apoyo_curso}</div><div class="sub">otros apoyos registrados</div></div>`;
+
+  const dNodos=Object.keys(m.docentes_vinculados.por_nodo);
+  mk("cDocNodo",{type:"bar",data:{labels:dNodos,datasets:[{data:dNodos.map(n=>m.docentes_vinculados.por_nodo[n]),backgroundColor:dNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:dNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
+    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
+
+  const dCarreras=Object.entries(m.docentes_vinculados.por_carrera).slice(0,8);
+  mk("cDocCarrera",{type:"bar",data:{labels:dCarreras.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:dCarreras.map(([,v])=>v),backgroundColor:PALETTE[4]+"cc",borderColor:PALETTE[4],borderWidth:1,borderRadius:4}]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+
+  // Tabla docentes con badge de tipo de apoyo
+  const tipoApoyo = d=>{
+    const a=d.Apoyo||"";
+    if(/Convenio|convenio/.test(a)) return '<span class="badge badge-blue">Convenio</span>';
+    if(/[Aa]sesor/.test(a))         return '<span class="badge badge-purple">Asesor tesis</span>';
+    return '<span class="badge badge-amber">Apoyo curso</span>';
+  };
+  $("tbDocentes").innerHTML = m.docentes_vinculados.detalle.map(d=>`
+    <tr>
+      <td style="font-weight:500">${d.Nombre} ${d.Apellido}</td>
+      <td style="color:#94a3b8;font-size:.76rem">${d.Carrera}</td>
+      <td style="font-size:.76rem">${d.Curso}</td>
       <td style="color:${NODO_COLOR[d.Nodo]||'#94a3b8'}">${d.Nodo}</td>
-      <td style="color:#94a3b8;font-size:.78rem">${d.Apoyo}</td>
+      <td>${tipoApoyo(d)}</td>
+      <td style="color:#64748b;font-size:.76rem">${d.Apoyo}</td>
     </tr>`).join("");
 }
 
 async function init(){
-  METRICS=await fetchMetrics();
-  if(!METRICS)return;
-  const nodos=METRICS.resumen.nodos||[];
+  M = await load();
+  if(!M) return;
+
+  const nodos = M.resumen.nodos||[];
   nodos.forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;$("filtroNodo").appendChild(o);});
-  MESES_ORDER.filter(ms=>METRICS.alumnos_asistidos.por_mes[ms]).forEach(ms=>{const o=document.createElement("option");o.value=ms;o.textContent=ms;$("filtroMes").appendChild(o);});
-  if(METRICS.resumen.ultima_actualizacion){
-    const d=new Date(METRICS.resumen.ultima_actualizacion);
+  MESES_ORDER.filter(ms=>M.alumnos_asistidos.por_mes[ms]).forEach(ms=>{const o=document.createElement("option");o.value=ms;o.textContent=ms;$("filtroMes").appendChild(o);});
+
+  if(M.resumen.ultima_actualizacion){
+    const d=new Date(M.resumen.ultima_actualizacion);
     $("lastUpdate").textContent="Actualizado: "+d.toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"});
   }
-  const mesesAct=MESES_ORDER.filter(ms=>METRICS.alumnos_asistidos.por_mes[ms]);
-  $("headerSub").textContent=`${METRICS.resumen.total_usuarios_registrados} usuarios registrados · ${mesesAct.join(", ")} 2026`;
+  const mesesAct=MESES_ORDER.filter(ms=>M.alumnos_asistidos.por_mes[ms]);
+  $("headerSub").textContent=`${M.resumen.total_usuarios_registrados} usuarios · ${M.convenios.total} convenios · ${mesesAct.join(", ")} 2026`;
+
   $("loading").style.display="none";
   $("dashboard").style.display="";
   $("filtersBar").style.display="";
+
   const onChange=()=>render($("filtroNodo").value,$("filtroMes").value);
   $("filtroNodo").addEventListener("change",onChange);
   $("filtroMes").addEventListener("change",onChange);
   render("todos","todos");
 }
+
 init();
 </script>
 </body>

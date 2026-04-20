@@ -49,6 +49,7 @@ REQUIRED_SHEETS = [
     "REGISTRO DE CAPACITACION",
     "Usuarios",
     "Docentes",
+    "CURSOS PUCP",
     "CONFIGURACION",
 ]
 
@@ -72,6 +73,10 @@ MESES_ES = {
 MESES_ORDER = list(MESES_ES.values())
 NODOS       = ["Fab1-Aditiva", "Fab2-Bioimpresión", "Fab3-Digital", "Fab4-Construcción"]
 
+# Tipos de usuario que corresponden a docentes / jefes de práctica
+TIPOS_DOC_JP = ["DOCENTE", "PREDOCENTE"]
+TIPOS_ALUMNO = ["ESTUDIANTE PREGRADO", "ESTUDIANTE MAESTRIA", "ESTUDIANTE DOCTORADO"]
+
 
 # ─── 1. Autenticación y lectura desde Google Sheets ─────────────────────────
 
@@ -81,7 +86,7 @@ def get_spreadsheet() -> gspread.Spreadsheet:
         sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
     creds_dict = json.loads(raw)
     creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    #CREDS_FILE = 'credentials.json'
+    #CREDS_FILE = '../credentials.json'
     #creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open_by_key(SPREADSHEET_ID)
@@ -95,7 +100,7 @@ def load_sheets(spreadsheet: gspread.Spreadsheet) -> dict[str, pd.DataFrame]:
         if name not in available:
             print(f"  Hoja '{name}' no encontrada — se omite.")
             continue
-        records = available[name].get_all_records()
+        records = available[name].get_all_records(numericise_ignore=[7,8])
         sheets[name] = pd.DataFrame(records) if records else pd.DataFrame()
         print(f"  {name:40s}  ({len(sheets[name])} filas)")
     return sheets
@@ -112,6 +117,10 @@ def enrich_uso(uso: pd.DataFrame, usuarios: pd.DataFrame) -> pd.DataFrame:
     uso["Año"]      = uso["Timestamp"].dt.year
     uso["Nodo"]     = uso["FabCore Staff"].map(STAFF_NODO).fillna("Sin asignar")
 
+    uso["CursoCodigo"] = (
+        uso["Curso"].fillna("").str.extract(r"^([A-Z0-9]+)", expand=False).str.strip()
+    )
+
     # Join carrera y tipo desde Usuarios
     u = usuarios[["Codigo", "Carrera", "Tipo de Usuario"]].copy()
     u["Codigo"] = u["Codigo"].astype(str).str.strip()
@@ -119,6 +128,10 @@ def enrich_uso(uso: pd.DataFrame, usuarios: pd.DataFrame) -> pd.DataFrame:
     uso = uso.merge(u, on="Codigo", how="left")
     uso["Carrera"]         = uso["Carrera"].fillna("Sin carrera")
     uso["Tipo de Usuario"] = uso["Tipo de Usuario"].fillna("Desconocido")
+
+    # Material: normalizar coma decimal
+    uso["Material empleado (g)"] = pd.to_numeric(uso['Material empleado (g)'].str.replace(',', '.'), errors="coerce")
+    uso["Tiempo de Uso"] = pd.to_numeric(uso["Tiempo de Uso"].str.replace(',', '.'), errors="coerce")
     return uso
 
 
@@ -149,12 +162,10 @@ def compute_metrics(sheets: dict) -> dict:
     cap      = enrich_cap(sheets["REGISTRO DE CAPACITACION"], sheets["Usuarios"])
     docentes = sheets["Docentes"]
     usuarios = sheets["Usuarios"]
+    cursos   = sheets["CURSOS PUCP"]
 
-    # Filtrar solo alumnos (excluye docentes y predocentes del conteo de atenciones)
-    es_alumno = uso["Tipo de Usuario"].str.contains(
-        "ESTUDIANTE|PREGRADO|MAESTRIA|DOCTORADO", na=False, case=False
-    )
-    alumnos_uso = uso[es_alumno]
+    alumnos_uso = uso[uso["Tipo de Usuario"].isin(TIPOS_ALUMNO)]
+    docjp_uso   = uso[uso["Tipo de Usuario"].isin(TIPOS_DOC_JP)]
 
     metrics = {}
 
@@ -192,21 +203,173 @@ def compute_metrics(sheets: dict) -> dict:
         ),
     }
 
+    # ── Atenciones a docentes y jefes de práctica ────────────────────────────
+    metrics["atenciones_doc_jp"] = {
+        # Conteos
+        "total_registros"        : int(len(docjp_uso)),
+        "docentes_unicos"        : int(docjp_uso[docjp_uso["Tipo de Usuario"]=="DOCENTE"]["Codigo"].nunique()),
+        "predocentes_unicos"     : int(docjp_uso[docjp_uso["Tipo de Usuario"]=="PREDOCENTE"]["Codigo"].nunique()),
+        # Totales por tipo de usuario
+        "por_tipo"               : safe_dict(docjp_uso.groupby("Tipo de Usuario").size()),
+        "por_mes"                : safe_dict(docjp_uso.groupby("MesNombre").size()),
+        "por_nodo"               : safe_dict(docjp_uso.groupby("Nodo").size()),
+        "por_servicio"           : safe_dict(docjp_uso.groupby("Servicio").size()),
+        # Detalle: atenciones por mes y nodo
+        "por_mes_nodo"     : (
+            docjp_uso.groupby(["MesNombre", "Nodo"]).size()
+            .reset_index(name="atenciones").to_dict(orient="records")
+        ),
+        # Detalle: atenciones por mes y tipo (para gráfico apilado)
+        "por_mes_tipo"           : (
+            docjp_uso.groupby(["MesNombre", "Tipo de Usuario"]).size()
+            .reset_index(name="atenciones").to_dict(orient="records")
+        ),
+        # Registros únicos por nodo y tipo
+        "unicos_por_nodo_tipo"   : (
+            docjp_uso.groupby(["Nodo", "Tipo de Usuario"])["Codigo"]
+            .nunique().reset_index(name="personas").to_dict(orient="records")
+        ),
+    }
+
     # ── Docentes apoyados ────────────────────────────────────────────────────
+    doc = docentes.copy()
+    doc["Nodo"] = doc["Nodo"].str.strip().str.replace(" ", "").str.lower()
+    NODO_NORM = {
+        "fabcore1": "Fab1-Aditiva",
+        "fabcore2": "Fab2-Bioimpresión",
+        "fabcore3": "Fab3-Digital",
+        "fabcore4": "Fab4-Construcción",
+    }
+    doc["NodoNorm"] = doc["Nodo"].map(NODO_NORM).fillna(doc["Nodo"])
+
     # Los docentes son personal institucional; nombre/cargo es info pública
-    metrics["docentes_apoyados"] = {
-        "total"      : int(docentes["Codigo"].nunique()),
-        "por_nodo"   : safe_dict(docentes.groupby("Nodo")["Codigo"].nunique()),
+    metrics["docentes_vinculados"] = {
+        "total"      : int(doc["Codigo"].nunique()),
+        "por_nodo"   : safe_dict(doc.groupby("NodoNorm")["Codigo"].nunique()),
         "por_carrera": safe_dict(
-            docentes.groupby("Carrera")["Codigo"].nunique().sort_values(ascending=False)
+            doc.groupby("Carrera")["Codigo"].nunique().sort_values(ascending=False)
+        ),
+        # Tipo de vínculo inferido del campo Apoyo
+        "convenio"      : int(doc["Apoyo"].str.contains("Convenio|convenio", na=False).sum()),
+        "asesor_tesis"  : int(doc["Apoyo"].str.contains("[Aa]sesor", na=False).sum()),
+        "apoyo_curso"   : int(
+            (~doc["Apoyo"].str.contains("Convenio|convenio|[Aa]sesor", na=False) &
+              doc["Apoyo"].notna()).sum()
         ),
         # Detalle sin código ni DNI
         "detalle": (
-            docentes[["Nombre", "Apellido", "Carrera", "Curso", "Nodo", "Apoyo"]]
+            doc[["Nombre", "Apellido", "Carrera", "Curso", "NodoNorm", "Apoyo"]]
+            .rename(columns={"NodoNorm": "Nodo"})
             .fillna("").to_dict(orient="records")
         ),
     }
 
+    # ── Convenios de curso por nodo ──────────────────────────────────────────
+    conv = cursos[cursos["CONVENIO"].astype(str).str.upper() == "SI"].copy()
+    conv["NodoNorm"] = (
+        conv["Nodo"].fillna("Sin asignar").str.strip().str.upper()
+        .map({"FABCORE 1": "Fab1-Aditiva", "FABCORE 2": "Fab2-Bioimpresión",
+              "FABCORE 3": "Fab3-Digital",  "FABCORE 4": "Fab4-Construcción"})
+        .fillna("Sin asignar")
+    )
+    conv["FECHA INICIO DE CONVENIO"] = pd.to_datetime(
+        conv["FECHA INICIO DE CONVENIO"], dayfirst=True, errors="coerce"
+    ).dt.strftime("%Y-%m-%d").fillna("")
+
+    metrics["convenios"] = {
+        "total"    : int(len(conv)),
+        "por_nodo" : safe_dict(conv.groupby("NodoNorm").size()),
+        # Lista completa para tabla (sin datos sensibles)
+        "detalle"  : (
+            conv[["CODIGO", "NOMBRE", "NodoNorm", "FECHA INICIO DE CONVENIO", "Notas"]]
+            .rename(columns={"NodoNorm": "Nodo", "FECHA INICIO DE CONVENIO": "fecha_convenio"})
+            .fillna("").to_dict(orient="records")
+        ),
+    }
+
+    # ── Material empleado por curso ──────────────────────────────────────────
+    mat_uso = uso.dropna(subset=["Material empleado (g)"])
+    mat_uso = mat_uso[mat_uso["Material empleado (g)"] > 0].copy()
+ 
+    # Clasificar cada registro: Curso / Proyecto / Tesis
+    def tipo_registro(cod):
+        c = str(cod).upper().strip()
+        if c.startswith("PROY"): return "Proyecto"
+        if c.startswith("TES"):  return "Tesis"
+        return "Curso"
+ 
+    mat_uso["TipoRegistro"] = mat_uso["CursoCodigo"].apply(tipo_registro)
+ 
+    # Normalizar material: todo lo que no es PLA ni Resina → "Otros"
+    RESINAS = {"Resina 1", "Resina Estandar"}
+    def norm_mat(m):
+        if m == "PLA": return "PLA"
+        if m in RESINAS: return "Resina"
+        return "Otros"
+    mat_uso["MaterialNorm"] = mat_uso["Material"].apply(norm_mat)
+ 
+    # Nombre limpio del curso: tomar el campo Curso completo, quitar código inicial
+    # Ej: "1MTR52 - PROYECTO DE DISEÑO MECATRÓNICO" → "PROYECTO DE DISEÑO MECATRÓNICO"
+    mat_uso["NombreCurso"] = (
+        mat_uso["Curso"].fillna("").str.replace(r"^[A-Za-z0-9]+\s*-\s*", "", regex=True).str.strip()
+    )
+    # Para registros con mismo código pero nombre escrito distinto, normalizar a mayúsculas
+    mat_uso["NombreCurso"] = mat_uso["NombreCurso"].str.upper()
+ 
+    # ── Resumen global de material ────────────────────────────────────────────
+    mat_por_nodo  = {k: round(float(v), 2) for k, v in mat_uso.groupby("Nodo")["Material empleado (g)"].sum().items()}
+    mat_por_tipo  = {k: round(float(v), 2) for k, v in mat_uso.groupby("MaterialNorm")["Material empleado (g)"].sum().items()}
+    mat_por_mes   = {str(k): round(float(v), 2) for k, v in mat_uso.groupby("MesNombre")["Material empleado (g)"].sum().items()}
+    mat_por_treg  = {k: round(float(v), 2) for k, v in mat_uso.groupby("TipoRegistro")["Material empleado (g)"].sum().items()}
+
+    # ── Helper: tabla de material por entidad (código + nombre) ───────────────
+    def tabla_mat(df):
+        """Devuelve lista de {codigo, nombre, PLA, Resina, Otros, total}"""
+        g = (
+            df.groupby(["CursoCodigo", "NombreCurso", "MaterialNorm"])["Material empleado (g)"]
+            .sum().reset_index()
+        )
+        pivot = g.pivot_table(
+            index=["CursoCodigo", "NombreCurso"],
+            columns="MaterialNorm", values="Material empleado (g)",
+            aggfunc="sum", fill_value=0
+        ).reset_index()
+        pivot.columns.name = None
+        for col in ["PLA", "Resina", "Otros"]:
+            if col not in pivot.columns:
+                pivot[col] = 0.0
+        pivot["total"] = pivot[["PLA", "Resina", "Otros"]].sum(axis=1)
+        pivot = pivot.sort_values("total", ascending=False)
+        return [
+            {
+                "codigo":  row["CursoCodigo"],
+                "nombre":  row["NombreCurso"],
+                "PLA":     round(float(row["PLA"]),   2),
+                "Resina":  round(float(row["Resina"]), 2),
+                "Otros":   round(float(row["Otros"]),  2),
+                "total":   round(float(row["total"]),  2),
+            }
+            for _, row in pivot.iterrows()
+        ]
+ 
+    # Subconjuntos por tipo
+    df_cursos    = mat_uso[mat_uso["TipoRegistro"] == "Curso"]
+    df_proyectos = mat_uso[mat_uso["TipoRegistro"] == "Proyecto"]
+    df_tesis     = mat_uso[mat_uso["TipoRegistro"] == "Tesis"]
+ 
+    metrics["material"] = {
+        # Totales globales
+        "total_gramos"  : round(float(mat_uso["Material empleado (g)"].sum()), 2),
+        "por_tipo"      : mat_por_tipo,       # {PLA, Resina, Otros}
+        "por_nodo"      : mat_por_nodo,
+        "por_mes"       : mat_por_mes,
+        "por_tipo_registro": mat_por_treg,    # {Curso, Proyecto, Tesis}
+        # Tablas desglosadas por tipo de registro
+        "cursos"        : tabla_mat(df_cursos),
+        "proyectos"     : tabla_mat(df_proyectos),
+        "tesis"         : tabla_mat(df_tesis),
+    }
+    
     # ── Capacitaciones ───────────────────────────────────────────────────────
     metrics["capacitaciones"] = {
         "total_registros"       : int(len(cap)),
@@ -228,14 +391,6 @@ def compute_metrics(sheets: dict) -> dict:
         "por_nodo"    : {k: int(v) for k, v in uso.groupby("Nodo")["Tiempo de Uso"].sum().items()},
         "por_mes"     : {str(k): int(v) for k, v in uso.groupby("MesNombre")["Tiempo de Uso"].sum().items()},
         "por_servicio": {k: int(v) for k, v in uso.groupby("Servicio")["Tiempo de Uso"].sum().items()},
-    }
-
-    # ── Material empleado ────────────────────────────────────────────────────
-    uso["Material empleado (g)"] = pd.to_numeric(uso["Material empleado (g)"], errors="coerce")
-    metrics["material_gramos"] = {
-        "total"   : float(round(uso["Material empleado (g)"].sum(skipna=True), 2)),
-        "por_nodo": {k: float(round(v, 2)) for k, v in uso.groupby("Nodo")["Material empleado (g)"].sum().items()},
-        "por_mes" : {str(k): float(round(v, 2)) for k, v in uso.groupby("MesNombre")["Material empleado (g)"].sum().items()},
     }
 
     # ── Resumen general ──────────────────────────────────────────────────────
@@ -280,10 +435,13 @@ def main():
     r = metrics["resumen"]
     print(f"\n{'─'*50}")
     print(f"  Alumnos asistidos (únicos) : {metrics['alumnos_asistidos']['total']}")
-    print(f"  Docentes apoyados          : {metrics['docentes_apoyados']['total']}")
+    print(f"  Docentes/JP atendidos      : {metrics['atenciones_doc_jp']['docentes_unicos']}D / {metrics['atenciones_doc_jp']['predocentes_unicos']}JP")
+    print(f"  Docentes vinculados        : {metrics['docentes_vinculados']['total']}")
     print(f"  Alumnos capacitados        : {metrics['capacitaciones']['alumnos_unicos']}")
     print(f"  Total atenciones           : {metrics['atenciones']['total']}")
     print(f"  Usuarios registrados       : {r['total_usuarios_registrados']}")
+    print(f"  Convenios establecidos     : {metrics['convenios']['total']}")
+    print(f"  Material total (g)         : {metrics['material']['total_gramos']}")
     print(f"  Guardado en               : {OUTPUT_PATH}")
     print(f"{'─'*50}\n")
 
