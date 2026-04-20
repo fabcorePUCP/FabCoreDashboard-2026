@@ -234,11 +234,39 @@ async function load(){
 function render(nodo, mes){
   const m = M;
   const nodos = m.resumen.nodos || Object.keys(NODO_COLOR).slice(0,4);
+  
+  // - Formato de Texto numerico
+  const num_format = (num, decimales = 0) => {
+    return num.toLocaleString('es-PE', {
+	  minimumFractionDigits: decimales, // Fuerza a que haya siempre 'X' decimales (rellena con ceros)
+	  maximumFractionDigits: decimales  // Evita que haya más de 'X' decimales
+	});
+  };
 
   // ── KPIs globales ──────────────────────────────────────────────────────────
   const f = rows=>{let r=rows;if(nodo!=="todos")r=r.filter(x=>x.Nodo===nodo);if(mes!=="todos")r=r.filter(x=>x.MesNombre===mes);return r;};
-  const alumnos    = (nodo==="todos"&&mes==="todos") ? m.alumnos_asistidos.total
-    : f(m.alumnos_asistidos.por_mes_nodo).reduce((s,r)=>s+r.alumnos,0);
+  
+  //caso de alumnos.  Evita duplicidad
+  let alumnos = 0;
+  
+  
+  if (nodo === "todos" && mes === "todos") {
+    // Caso 1: Todo el año, todos los nodos (Lee el total global único)
+    alumnos = m.alumnos_asistidos.total || 0;
+  } else if (nodo !== "todos" && mes === "todos") {
+    // Caso 2: Todo el año, nodo específico (Lee el total único del nodo)
+    alumnos = m.alumnos_asistidos.por_nodo[nodo] || 0;
+  } else if (nodo === "todos" && mes !== "todos") {
+    // Caso 3: Mes específico, todos los nodos (Lee el total único del mes)
+    alumnos = m.alumnos_asistidos.por_mes[mes] || 0;
+  } else {
+    // Caso 4: Mes específico y nodo específico (Busca el cruce exacto)
+    const record = m.alumnos_asistidos.por_mes_nodo.find(
+      x => x.Nodo === nodo && x.MesNombre === mes
+    );
+    alumnos = record ? record.alumnos : 0;
+  }
+  
   const atenciones = (nodo==="todos"&&mes==="todos") ? m.atenciones.total
     : f(m.atenciones.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
   const atenciones_doc_jp = (nodo==="todos"&&mes==="todos") ? m.atenciones_doc_jp.total_registros
@@ -254,8 +282,8 @@ function render(nodo, mes){
     <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docentes_vinculados}</div><div class="sub">docentes con apoyo registrado</div></div>
     <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convenios}</div><div class="sub">cursos con convenio activo</div></div>
     <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atenciones_doc_jp}</div><div class="sub">${m.atenciones_doc_jp.docentes_unicos} doc · ${m.atenciones_doc_jp.predocentes_unicos} JP únicos</div></div>
-    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(m.material.total_gramos/1000).toFixed(1)}kg</div><div class="sub">${m.material.total_gramos.toLocaleString("es",{maximumFractionDigits:0})} g total</div></div>
-    <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${Math.round(m.tiempo_uso_minutos.total/60)}h</div><div class="sub">horas de uso de equipos</div></div>`;
+    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(m.material.total_gramos/1000).toFixed(1)}kg</div><div class="sub">${num_format(m.material.total_gramos)} g total</div></div>
+    <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${num_format(Math.round(m.tiempo_uso_minutos.total/60))}h</div><div class="sub">horas de uso de equipos</div></div>`;
 
   // ── Nodo cards ─────────────────────────────────────────────────────────────
   $("nodos").innerHTML = nodos.map(n=>`
@@ -266,8 +294,8 @@ function render(nodo, mes){
         <span><b>${m.atenciones.por_nodo[n]||0}</b>atenc.</span>
         <span><b>${m.convenios.por_nodo[n]||0}</b>convenios</span>
         <span><b>${m.docentes_vinculados.por_nodo[n]||0}</b>docentes</span>
-        <span><b>${Math.round((m.tiempo_uso_minutos.por_nodo[n]||0)/60)}h</b>uso</span>
-        ${(m.material.por_nodo[n]||0)>0 ? `<span><b>${n==="Fab4-Construcción" ? ((m.material.por_nodo[n]/1000).toLocaleString("es",{maximumFractionDigits:1})+"kg") : (m.material.por_nodo[n].toLocaleString("es",{maximumFractionDigits:0})+"g")}</b>material</span>` : ""}
+        <span><b>${num_format(Math.round((m.tiempo_uso_minutos.por_nodo[n]||0)/60))}h</b>uso</span>
+        ${(m.material.por_nodo[n]||0)>0 ? `<span><b>${n==="Fab4-Construcción" ? (num_format(m.material.por_nodo[n])+"kg") : (num_format(m.material.por_nodo[n])+"g")}</b>material</span>` : ""}
       </div>
     </div>`).join("");
 
@@ -324,16 +352,9 @@ function render(nodo, mes){
 
   // ── MATERIAL POR CURSO ─────────────────────────────────────────────────────
 
-  // Helper: formatea un valor en gramos según el nodo.
-  // Fab4 muestra en kg (los valores ya vienen en g desde el worker, convertidos),
-  // el resto en g. Para valores globales (sin nodo) siempre g.
   const FAB4 = "Fab4-Construcción";
-  function fmtMat(grams, nodo){
-    if(nodo === FAB4) return (grams/1000).toLocaleString("es",{maximumFractionDigits:3}) + " kg";
-    return grams.toLocaleString("es",{maximumFractionDigits:1}) + " g";
-  }
   // Para tooltips de gráficos sin nodo explícito, siempre g
-  function fmtG(v){ return v.toLocaleString("es",{maximumFractionDigits:1}) + " g"; }
+  function fmtG(v){ return num_format(v, 1) + " g"; }
 
   // Chart 1: barras por tipo de registro (Curso / Proyecto / Tesis) — valores en g
   const trKeys = Object.keys(m.material.por_tipo_registro);
@@ -360,7 +381,7 @@ function render(nodo, mes){
   // Chart 3: material por nodo — eje izquierdo g (Fab1/2/3), eje derecho kg (Fab4)
   // Construimos dos datasets: uno para Fab1-3 (g), otro para Fab4 (kg)
   const matNodosK = Object.keys(m.material.por_nodo);
-  const matFab4Val = (m.material.por_nodo[FAB4] || 0) / 1000; // → kg para el eje
+  const matFab4Val = (m.material.por_nodo[FAB4] || 0); // → kg para el eje
   const matNodoLabels = matNodosK.map(n => n === FAB4 ? n + " (kg)" : n);
   // Separamos en dos datasets para ejes distintos
   const dsMatG  = { label:"g",  yAxisID:"yG",
@@ -376,7 +397,7 @@ function render(nodo, mes){
     options:{responsive:true,maintainAspectRatio:true,
       plugins:{legend:{display:false},
         tooltip:{callbacks:{label:ctx=> ctx.dataset.yAxisID==="yKg"
-          ? " Fab4: "+(ctx.raw).toLocaleString("es",{maximumFractionDigits:3})+" kg"
+          ? " Fab4: "+num_format(ctx.raw,1)+" kg"
           : " "+ctx.label+": "+fmtG(ctx.raw)}}},
       scales:{
         x:{grid:{display:false},ticks:tc()},
@@ -395,7 +416,7 @@ function render(nodo, mes){
     const maxTotal = rows.length ? Math.max(...rows.map(r=>r.total)) : 1;
     $("tbMaterial").innerHTML = rows.map((r,i)=>{
       const pct = v => Math.round((v/maxTotal)*80);
-      const fmt = v => v > 0 ? v.toLocaleString("es",{maximumFractionDigits:1}) : "—";
+      const fmt = v => v > 0 ? num_format(v, 1) : "—";
       const barPLA    = r.PLA   >0 ? `<span class="mat-bar" style="width:${pct(r.PLA)}px;background:#3b82f6"></span>` : "";
       const barResina = r.Resina>0 ? `<span class="mat-bar" style="width:${pct(r.Resina)}px;background:#10b981"></span>` : "";
       return `<tr>
