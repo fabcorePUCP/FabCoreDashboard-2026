@@ -85,6 +85,36 @@
     main,.filters,header{padding-left:14px;padding-right:14px;}
     .charts{grid-template-columns:1fr;}.wide{grid-column:unset;}
   }
+  /* Heatmap */
+  .hm-table{border-collapse:separate;border-spacing:3px;font-size:.72rem;width: max-content;margin: 0 auto;}
+  .hm-cell{width:36px;height:28px;border-radius:4px;text-align:center;vertical-align:middle;font-size:.68rem;font-weight:600;cursor:default;transition:opacity .15s;}
+  .hm-cell:hover{opacity:.75;}
+  .hm-label-hora{color:var(--muted);font-size:.68rem;text-align:center;padding-bottom:4px;}
+  .hm-label-dia{color:var(--muted);font-size:.72rem;text-align:right;padding-right:8px;white-space:nowrap;}
+  
+  /* Barras laterales del Heatmap */
+  .hm-bar-cell {
+    padding-right: 12px;
+    vertical-align: middle;
+    width: 200px; /* Espacio fijo reservado para las barras */
+  }
+  .hm-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 16px; /* Para que sea un poco más baja que la celda de 28px */
+  }
+  .hm-bar-fill {
+    height: 100%;
+    background: var(--fab1); /* Usa el azul de tu paleta */
+    border-radius: 3px;
+    /* El width se inyectará en línea (inline style) por cada fila */
+  }
+  .hm-bar-text {
+    font-size: .68rem;
+    color: var(--text);
+    font-weight: 600;
+  }
 </style>
 </head>
 <body>
@@ -107,48 +137,51 @@
   <div id="loading"><div class="spinner"></div><span>Cargando métricas…</span></div>
   <div id="dashboard" style="display:none">
 
-    <!-- ── KPIs principales ── -->
+    <!-- ══ 1. RESUMEN GLOBAL ══════════════════════════════════════════════ -->
     <div class="kpis" id="kpis"></div>
 
-    <!-- ── Por nodo ── -->
+    <!-- ══ 2. VISTA POR NODO ═══════════════════════════════════════════════ -->
     <div class="stitle">Por Nodo</div>
     <div class="nodos" id="nodos"></div>
 
-    <!-- ── Evolución mensual ── -->
-    <div class="stitle">Evolución Mensual</div>
+    <!-- ══ 3. ALUMNOS ══════════════════════════════════════════════════════ -->
+    <div class="stitle">Alumnos</div>
     <div class="charts">
-      <div class="chart-card wide"><h3>Alumnos asistidos por mes y nodo</h3><canvas id="cMesNodo"></canvas></div>
+      <div class="chart-card wide"><h3>Atenciones a alumnos por mes y nodo</h3><canvas id="cMesNodo"></canvas></div>
     </div>
-
-    <!-- ── Distribución general ── -->
-    <div class="stitle">Distribución</div>
-    <div class="charts">
-      <div class="chart-card"><h3>Atenciones por servicio</h3><canvas id="cServicio"></canvas></div>
-      <div class="chart-card"><h3>Capacitaciones por tipo</h3><canvas id="cCap"></canvas></div>
+    <div class="charts" style="margin-top:18px">
       <div class="chart-card"><h3>Top 8 carreras — alumnos asistidos</h3><canvas id="cCarreras"></canvas></div>
-      <div class="chart-card"><h3>Tiempo de uso por nodo (minutos)</h3><canvas id="cTiempo"></canvas></div>
+      <div class="chart-card"><h3>Capacitaciones por tipo</h3><canvas id="cCap"></canvas></div>
     </div>
 
-    <!-- ── Convenios de curso ── -->
-    <div class="stitle">Convenios de Curso por Nodo</div>
+    <!-- ══ 4. TASA DE RETORNO ══════════════════════════════════════════════ -->
+    <div class="stitle">Retorno de Alumnos</div>
+    <div class="kpis" id="kpisRetorno"></div>
+    <div class="charts" style="margin-top:14px">
+      <div class="chart-card"><h3>Frecuencia de visitas</h3><canvas id="cRetornoDist"></canvas></div>
+      <div class="chart-card"><h3>Tasa de retorno por nodo (%)</h3><canvas id="cRetornoNodo"></canvas></div>
+    </div>
+
+    <!-- ══ 5. USO DE EQUIPOS ═══════════════════════════════════════════════ -->
+    <div class="stitle">Uso de Equipos</div>
     <div class="charts">
-      <div class="chart-card"><h3>Convenios por nodo</h3><canvas id="cConvenios"></canvas></div>
-      <div class="chart-card wide">
-        <h3>Cursos con convenio establecido</h3>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>Código</th><th>Nombre del curso</th><th>Nodo</th><th>Fecha convenio</th><th>Notas</th></tr></thead>
-            <tbody id="tbConvenios"></tbody>
-          </table>
-        </div>
-      </div>
+      <div class="chart-card"><h3>Atenciones por equipo</h3><canvas id="cEqAtenciones"></canvas></div>
+      <div class="chart-card"><h3>Tiempo de uso por equipo (h)</h3><canvas id="cEqTiempo"></canvas></div>
+      <div class="chart-card"><h3>Atenciones por tipo de servicio</h3><canvas id="cServicio"></canvas></div>
     </div>
 
-    <!-- ── Material por curso ── -->
+    <!-- ══ 6. HORARIO DE DEMANDA ════════════════════════════════════════════ -->
+    <div class="stitle">Horario de Demanda</div>
+    <div class="chart-card wide">
+      <h3>Atenciones por día y hora</h3>
+      <div id="heatmapContainer" style="overflow-x:auto"></div>
+    </div>
+
+    <!-- ══ 7. MATERIAL ═════════════════════════════════════════════════════ -->
     <div class="stitle">Material Empleado (PLA y Resina)</div>
     <div class="charts">
-      <div class="chart-card"><h3>Material por tipo de registro</h3><canvas id="cMatTipoReg"></canvas></div>
       <div class="chart-card"><h3>PLA vs Resina — distribución global</h3><canvas id="cMatTipo"></canvas></div>
+      <div class="chart-card"><h3>Material por tipo de registro</h3><canvas id="cMatTipoReg"></canvas></div>
       <div class="chart-card"><h3>Material por nodo <span id="matNodoUnit" style="color:#6366f1"></span></h3><canvas id="cMatNodo"></canvas></div>
     </div>
     <div class="chart-card wide" style="margin-top:18px">
@@ -168,19 +201,25 @@
       </div>
     </div>
 
-    <!-- ── Atenciones docentes / JP ── -->
-    <div class="stitle">Atenciones a Docentes y Jefes de Práctica</div>
-    <div class="charts">
-      <div class="chart-card"><h3>Atenciones por tipo y mes</h3><canvas id="cDocJPMes"></canvas></div>
-      <div class="chart-card"><h3>Distribución por nodo</h3><canvas id="cDocJPNodo"></canvas></div>
-    </div>
-
-    <!-- ── Docentes vinculados ── -->
-    <div class="stitle">Docentes Vinculados</div>
+    <!-- ══ 8. DOCENTES Y CONVENIOS ══════════════════════════════════════════ -->
+    <div class="stitle">Docentes y Convenios</div>
     <div class="kpis" id="kpisDocentes"></div>
     <div class="charts" style="margin-top:14px">
-      <div class="chart-card"><h3>Docentes por nodo</h3><canvas id="cDocNodo"></canvas></div>
-      <div class="chart-card"><h3>Top carreras docentes</h3><canvas id="cDocCarrera"></canvas></div>
+      <div class="chart-card"><h3>Docentes vinculados por nodo</h3><canvas id="cDocNodo"></canvas></div>
+      <div class="chart-card"><h3>Convenios de curso por nodo</h3><canvas id="cConvenios"></canvas></div>
+      <div class="chart-card"><h3>Atenciones Doc/JP por mes</h3><canvas id="cDocJPMes"></canvas></div>
+      <div class="chart-card"><h3>Top carreras — docentes</h3><canvas id="cDocCarrera"></canvas></div>
+    </div>
+    <div class="charts" style="margin-top:18px">
+      <div class="chart-card wide">
+        <h3>Cursos con convenio establecido</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Código</th><th>Nombre del curso</th><th>Nodo</th><th>Fecha convenio</th><th>Notas</th></tr></thead>
+            <tbody id="tbConvenios"></tbody>
+          </table>
+        </div>
+      </div>
       <div class="chart-card wide">
         <h3>Listado de docentes vinculados</h3>
         <div class="table-wrap">
@@ -330,11 +369,6 @@ function render(nodo, mes){
     options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
       scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
 
-  // ── Tiempo por nodo ───────────────────────────────────────────────────────
-  mk("cTiempo",{type:"bar",data:{labels:nodos,datasets:[{data:nodos.map(n=>m.tiempo_uso_minutos.por_nodo[n]||0),backgroundColor:nodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:nodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
-
   // ── CONVENIOS ─────────────────────────────────────────────────────────────
   const convNodos=Object.keys(m.convenios.por_nodo);
   mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>m.convenios.por_nodo[n]||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
@@ -449,11 +483,6 @@ function render(nodo, mes){
   },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
     scales:{x:{grid:gc(),ticks:tc(),stacked:true},y:{grid:gc(),ticks:tc(),beginAtZero:true,stacked:true}}}});
 
-  const djNodos = Object.keys(m.atenciones_doc_jp.por_nodo);
-  mk("cDocJPNodo",{type:"bar",data:{labels:djNodos,datasets:[{data:djNodos.map(n=>m.atenciones_doc_jp.por_nodo[n]),backgroundColor:djNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:djNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
-
   // ── DOCENTES VINCULADOS ───────────────────────────────────────────────────
   $("kpisDocentes").innerHTML=`
     <div class="kpi c1"><div class="lbl">Total vinculados</div><div class="val">${m.docentes_vinculados.total}</div><div class="sub">docentes únicos registrados</div></div>
@@ -487,6 +516,142 @@ function render(nodo, mes){
       <td>${tipoApoyo(d)}</td>
       <td style="color:#64748b;font-size:.76rem">${d.Apoyo}</td>
     </tr>`).join("");
+
+  // ── EQUIPOS MÁS USADOS ────────────────────────────────────────────────────
+  const eq = m.equipos.ranking;
+  const eqLabels = eq.map(e => e.equipo.length > 22 ? e.equipo.slice(0,20)+"…" : e.equipo);
+
+  mk("cEqAtenciones",{type:"bar",
+    data:{labels:eqLabels,datasets:[{
+      data:eq.map(e=>e.atenciones),
+      backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4
+    }]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} atenciones`}}},
+      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+
+  mk("cEqTiempo",{type:"bar",
+    data:{labels:eqLabels,datasets:[{
+      data:eq.map(e=>Math.round(e.tiempo_min/60)),
+      backgroundColor:PALETTE[2]+"cc",borderColor:PALETTE[2],borderWidth:1,borderRadius:4
+    }]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} h`}}},
+      scales:{x:{grid:gc(),ticks:{...tc(),callback:v=>v+"h"},beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+
+  // ── TASA DE RETORNO ───────────────────────────────────────────────────────
+  const ret = m.retorno;
+  $("kpisRetorno").innerHTML=`
+    <div class="kpi c1"><div class="lbl">Alumnos únicos</div><div class="val">${ret.total_alumnos}</div><div class="sub">con al menos una atención</div></div>
+    <div class="kpi c2"><div class="lbl">Recurrentes</div><div class="val">${ret.recurrentes}</div><div class="sub">volvieron más de una vez</div></div>
+    <div class="kpi ca"><div class="lbl">Tasa de retorno</div><div class="val">${ret.tasa_global_pct}%</div><div class="sub">alumnos que repitieron visita</div></div>
+    <div class="kpi c3"><div class="lbl">Máx. visitas</div><div class="val">${ret.max_visitas}</div><div class="sub">por un mismo alumno</div></div>`;
+
+  // Gráfico distribución de frecuencia
+  const freqKeys = Object.keys(ret.frecuencia_dist).sort((a,b)=>
+    (a==="5+"?99:+a)-(b==="5+"?99:+b));
+  const freqLabels = freqKeys.map(k => k==="1" ? "1 visita" : k==="5+" ? "5+ visitas" : `${k} visitas`);
+  mk("cRetornoDist",{type:"bar",
+    data:{labels:freqLabels,datasets:[{
+      data:freqKeys.map(k=>ret.frecuencia_dist[k]),
+      backgroundColor:freqKeys.map((_,i)=>i===0?"#6b728099":(PALETTE[0]+"cc")),
+      borderColor:freqKeys.map((_,i)=>i===0?"#6b7280":PALETTE[0]),
+      borderWidth:1,borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} alumnos`}}},
+      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+
+  // Tasa de retorno por nodo (barras horizontales)
+  const retNodos = Object.entries(ret.por_nodo).filter(([,v])=>v.total>0);
+  mk("cRetornoNodo",{type:"bar",
+    data:{labels:retNodos.map(([k])=>k),datasets:[
+      {label:"Recurrentes %",data:retNodos.map(([,v])=>v.tasa_pct),
+       backgroundColor:retNodos.map(([k])=>(NODO_COLOR[k]||"#6b7280")+"cc"),
+       borderColor:retNodos.map(([k])=>NODO_COLOR[k]||"#6b7280"),borderWidth:1,borderRadius:6},
+    ]},
+    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+      plugins:{legend:{display:false},tooltip:{callbacks:{
+        label:ctx=>{
+          const [nKey] = retNodos[ctx.dataIndex];
+          const nd = ret.por_nodo[nKey];
+          return ` ${ctx.raw}%  (${nd.recurrentes}/${nd.total})`;
+        }
+      }}},
+      scales:{
+        x:{grid:gc(),ticks:{...tc(),callback:v=>v+"%"},beginAtZero:true,max:100},
+        y:{grid:{display:false},ticks:tc()}
+      }}});
+
+  // ── HEATMAP HORARIO ───────────────────────────────────────────────────────
+  (function(){
+    const hm  = m.heatmap_horario;
+    const dias = hm.dias;
+    const horas = hm.horas.filter(h=>h>=8&&h<=20); // recortar horas marginales
+    const maxV = hm.max_valor;
+
+    // Construir lookup {dia_idx-hora: atenciones}
+    const lookup = {};
+    hm.celdas.forEach(c=>{ lookup[c.dia_idx+"-"+c.hora] = c.atenciones; });
+	
+	// --- NUEVO: Calcular totales por día ---
+    const totalesPorDia = new Array(dias.length).fill(0);
+    dias.forEach((_, di) => {
+      horas.forEach(h => {
+        totalesPorDia[di] += (lookup[di+"-"+h] || 0);
+      });
+    });
+    // Obtener el día con mayor cantidad de atenciones (mínimo 1 para evitar dividir por cero)
+    const maxTotalDia = Math.max(...totalesPorDia, 1); 
+    // ---------------------------------------
+
+    // Interpolación de color: de fondo de card (0) a --fab1 (max)
+    function cellColor(v){
+      if(!v) return "var(--card)";
+      const t = v/maxV;
+      // Azul con opacidad proporcional al valor
+      const a = 0.12 + t*0.75;
+      return `rgba(59,130,246,${a.toFixed(2)})`;
+    }
+    function textColor(v){
+      if(!v) return "var(--muted)";
+      return v/maxV > 0.55 ? "#fff" : "var(--text)";
+    }
+
+    // Construir tabla HTML
+    let tbl = `<table class="hm-table"><thead><tr><th colspan="2"></th>`;
+    horas.forEach(h=>{
+      const label = h<12 ? h+"am" : h===12 ? "12pm" : (h-12)+"pm";
+      tbl += `<th class="hm-label-hora">${label}</th>`;
+    });
+    tbl += `</tr></thead><tbody>`;
+
+    dias.forEach((dia,di)=>{
+      tbl += `<tr><td class="hm-label-dia">${dia}</td>`;
+	  // --- NUEVO: Construir la celda de la barra ---
+      const totalDia = totalesPorDia[di];
+      const widthPct = (totalDia / maxTotalDia) * 100;
+      tbl += `
+        <td class="hm-bar-cell">
+          <div class="hm-bar-wrapper" title="Total del día: ${totalDia}">
+            <div class="hm-bar-fill" style="width: ${widthPct.toFixed(1)}%;"></div>
+            <span class="hm-bar-text">${totalDia > 0 ? totalDia : ''}</span>
+          </div>
+        </td>`;
+      // ---------------------------------------------
+      horas.forEach(h=>{
+        const v = lookup[di+"-"+h] || 0;
+        const bg = cellColor(v);
+        const fg = textColor(v);
+        const tip = v ? `title="${v} atención${v>1?'es':''}"` : "";
+        tbl += `<td class="hm-cell" style="background:${bg};color:${fg}" ${tip}>${v||""}</td>`;
+      });
+      tbl += `</tr>`;
+    });
+    tbl += `</tbody></table>`;
+
+    $("heatmapContainer").innerHTML = tbl;
+  })();
 }
 
 async function init(){

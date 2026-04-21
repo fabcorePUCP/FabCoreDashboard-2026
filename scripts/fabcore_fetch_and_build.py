@@ -384,6 +384,99 @@ def compute_metrics(sheets: dict) -> dict:
         ),
     }
 
+    # ── Equipos más usados ───────────────────────────────────────────────────
+    # Normalizar nombres (case + trim) antes de agrupar
+    uso["EquipoNorm"] = uso["Equipo Empleado"].str.upper().str.strip()
+    # Unificar variantes del mismo equipo
+    EQUIPO_ALIAS = {"BIOIMPRESORA": "BIOIMPRESORA TISSUESTART"}
+    uso["EquipoNorm"] = uso["EquipoNorm"].replace(EQUIPO_ALIAS)
+ 
+    eq_grp = uso[uso["EquipoNorm"].notna() & (uso["EquipoNorm"] != "")].groupby("EquipoNorm")
+    eq_atenciones = eq_grp.size().sort_values(ascending=False)
+    eq_tiempo     = eq_grp["Tiempo de Uso"].sum().reindex(eq_atenciones.index).fillna(0)
+    eq_material   = eq_grp["Material empleado (g)"].sum().reindex(eq_atenciones.index).fillna(0)
+ 
+    metrics["equipos"] = {
+        "ranking": [
+            {
+                "equipo"    : equipo,
+                "atenciones": int(eq_atenciones[equipo]),
+                "tiempo_min": int(eq_tiempo[equipo]),
+                "material_g": round(float(eq_material[equipo]), 2),
+            }
+            for equipo in eq_atenciones.index
+            if equipo not in {"USO DE ESPACIO (NO EQUIPO)"}
+        ]
+    }
+ 
+    # ── Tasa de retorno ──────────────────────────────────────────────────────
+    alumnos_uso_ret = uso[uso["Tipo de Usuario"].isin(TIPOS_ALUMNO)]
+    visitas_alumno  = alumnos_uso_ret.groupby("Codigo").size()
+    total_alumnos   = len(visitas_alumno)
+ 
+    # Distribución de frecuencia: {1: N, 2: N, 3+: N, 5+: N …}
+    freq_dist = visitas_alumno.value_counts().sort_index()
+    # Agrupar todo lo que sea ≥ 5 en un solo bucket "5+"
+    freq_agrupada = {}
+    for n_visitas, count in freq_dist.items():
+        key = str(n_visitas) if n_visitas < 5 else "5+"
+        freq_agrupada[key] = freq_agrupada.get(key, 0) + int(count)
+ 
+    # Retorno por nodo
+    alumnos_uso_ret2 = alumnos_uso_ret.copy()
+    retorno_por_nodo = {}
+    for nodo, grp in alumnos_uso_ret2.groupby("Nodo"):
+        v = grp.groupby("Codigo").size()
+        recurrentes = int((v > 1).sum())
+        total_n     = len(v)
+        retorno_por_nodo[nodo] = {
+            "total"       : total_n,
+            "recurrentes" : recurrentes,
+            "tasa_pct"    : round(recurrentes / total_n * 100, 1) if total_n else 0,
+        }
+ 
+    recurrentes_global = int((visitas_alumno > 1).sum())
+    metrics["retorno"] = {
+        "total_alumnos"    : total_alumnos,
+        "unicos"           : int((visitas_alumno == 1).sum()),
+        "recurrentes"      : recurrentes_global,
+        "tasa_global_pct"  : round(recurrentes_global / total_alumnos * 100, 1) if total_alumnos else 0,
+        "frecuencia_dist"  : freq_agrupada,   # {1: N, 2: N, 3: N, 4: N, "5+": N}
+        "por_nodo"         : retorno_por_nodo,
+        "max_visitas"      : int(visitas_alumno.max()),
+    }
+ 
+    # ── Heatmap horario (día × hora) ─────────────────────────────────────────
+    DIAS_ES = {0: "Lunes", 1: "Martes", 2: "Miércoles", 3: "Jueves", 4: "Viernes",
+               5: "Sábado", 6: "Domingo"}
+    uso["DiaSemana"] = uso["Timestamp"].dt.dayofweek
+    uso["Hora"]      = uso["Timestamp"].dt.hour
+ 
+    heatmap_raw = (
+        uso.groupby(["DiaSemana", "Hora"])
+        .size()
+        .reset_index(name="atenciones")
+    )
+ 
+    # Construir matriz 5×(horas con datos) como lista de {dia, hora, valor}
+    heatmap_cells = [
+        {
+            "dia"        : DIAS_ES[int(row["DiaSemana"])],
+            "dia_idx"    : int(row["DiaSemana"]),  # 0-4 para ordenar
+            "hora"       : int(row["Hora"]),
+            "atenciones" : int(row["atenciones"]),
+        }
+        for _, row in heatmap_raw.iterrows()
+        if int(row["DiaSemana"]) < 5  # solo Lun-Vie
+    ]
+ 
+    metrics["heatmap_horario"] = {
+        "celdas"    : heatmap_cells,
+        "max_valor" : int(heatmap_raw["atenciones"].max()),
+        "dias"      : ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes"],
+        "horas"     : sorted(uso["Hora"].dropna().unique().astype(int).tolist()),
+    }
+
     # ── Tiempo de uso ────────────────────────────────────────────────────────
     uso["Tiempo de Uso"] = pd.to_numeric(uso["Tiempo de Uso"], errors="coerce")
     metrics["tiempo_uso_minutos"] = {
