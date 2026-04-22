@@ -106,7 +106,7 @@
   }
   .hm-bar-fill {
     height: 100%;
-    background: var(--fab1); /* Usa el azul de tu paleta */
+    background: linear-gradient(90deg, var(--card), var(--border) 60%, var(--fab1));
     border-radius: 3px;
     /* El width se inyectará en línea (inline style) por cada fila */
   }
@@ -310,9 +310,14 @@ function render(nodo, mes){
     : f(m.atenciones.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
   const atenciones_doc_jp = (nodo==="todos"&&mes==="todos") ? m.atenciones_doc_jp.total_registros
     : f(m.atenciones_doc_jp.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
+  let material = (nodo==="todos"&&mes==="todos") ? m.material.total_gramos
+    : f(m.material.por_mes_nodo).reduce((s,r)=>s+r.material,0);
+  const minutos = (nodo==="todos"&&mes==="todos") ? m.tiempo_uso_minutos.total
+    : f(m.tiempo_uso_minutos.por_mes_nodo).reduce((s,r)=>s+r.minutos,0);
   const convenios = (nodo!=="todos") ? (m.convenios.por_nodo[nodo]||0) : m.convenios.total;
   const docentes_vinculados = (nodo!=="todos") ? (m.docentes_vinculados.por_nodo[nodo]||0) : m.docentes_vinculados.total;
   const cap = (mes!=="todos") ? (m.capacitaciones.alumnos_unicos_por_mes[mes]||0) : m.capacitaciones.alumnos_unicos;
+  if (nodo==="Fab4-Construcción") {material = material*1000;}
 
   $("kpis").innerHTML=`
     <div class="kpi c1"><div class="lbl">Alumnos asistidos</div><div class="val">${alumnos}</div><div class="sub">alumnos únicos con atención</div></div>
@@ -321,8 +326,8 @@ function render(nodo, mes){
     <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docentes_vinculados}</div><div class="sub">docentes con apoyo registrado</div></div>
     <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convenios}</div><div class="sub">cursos con convenio activo</div></div>
     <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atenciones_doc_jp}</div><div class="sub">${m.atenciones_doc_jp.docentes_unicos} doc · ${m.atenciones_doc_jp.predocentes_unicos} JP únicos</div></div>
-    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(m.material.total_gramos/1000).toFixed(1)}kg</div><div class="sub">${num_format(m.material.total_gramos)} g total</div></div>
-    <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${num_format(Math.round(m.tiempo_uso_minutos.total/60))}h</div><div class="sub">horas de uso de equipos</div></div>`;
+    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(material/1000).toFixed(1)}kg</div><div class="sub">${num_format(material)} g total</div></div>
+    <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${num_format(Math.round(minutos/60))}h</div><div class="sub">horas de uso de equipos</div></div>`;
 
   // ── Nodo cards ─────────────────────────────────────────────────────────────
   $("nodos").innerHTML = nodos.map(n=>`

@@ -81,13 +81,13 @@ TIPOS_ALUMNO = ["ESTUDIANTE PREGRADO", "ESTUDIANTE MAESTRIA", "ESTUDIANTE DOCTOR
 # ─── 1. Autenticación y lectura desde Google Sheets ─────────────────────────
 
 def get_spreadsheet() -> gspread.Spreadsheet:
-    raw = os.environ.get("GOOGLE_CREDENTIALS")
-    if not raw:
-        sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
-    creds_dict = json.loads(raw)
-    creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    #CREDS_FILE = '../credentials.json'
-    #creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+    #raw = os.environ.get("GOOGLE_CREDENTIALS")
+    #if not raw:
+    #    sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
+    #creds_dict = json.loads(raw)
+    #creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+    CREDS_FILE = '../credentials.json'
+    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
     client = gspread.authorize(creds)
     return client.open_by_key(SPREADSHEET_ID)
 
@@ -321,6 +321,11 @@ def compute_metrics(sheets: dict) -> dict:
     mat_por_tipo  = {k: round(float(v), 2) for k, v in mat_uso.groupby("MaterialNorm")["Material empleado (g)"].sum().items()}
     mat_por_mes   = {str(k): round(float(v), 2) for k, v in mat_uso.groupby("MesNombre")["Material empleado (g)"].sum().items()}
     mat_por_treg  = {k: round(float(v), 2) for k, v in mat_uso.groupby("TipoRegistro")["Material empleado (g)"].sum().items()}
+    mat_por_mes_nodo = (uso.groupby(["MesNombre", "Nodo"])["Material empleado (g)"]
+                        .sum().reset_index()
+                        .rename(columns={"Material empleado (g)": "material"})
+                        .to_dict(orient="records")
+                        )
 
     # ── Helper: tabla de material por entidad (código + nombre) ───────────────
     def tabla_mat(df):
@@ -363,6 +368,7 @@ def compute_metrics(sheets: dict) -> dict:
         "por_tipo"      : mat_por_tipo,       # {PLA, Resina, Otros}
         "por_nodo"      : mat_por_nodo,
         "por_mes"       : mat_por_mes,
+        "por_mes_nodo"  : mat_por_mes_nodo,
         "por_tipo_registro": mat_por_treg,    # {Curso, Proyecto, Tesis}
         # Tablas desglosadas por tipo de registro
         "cursos"        : tabla_mat(df_cursos),
@@ -484,6 +490,12 @@ def compute_metrics(sheets: dict) -> dict:
         "por_nodo"    : {k: int(v) for k, v in uso.groupby("Nodo")["Tiempo de Uso"].sum().items()},
         "por_mes"     : {str(k): int(v) for k, v in uso.groupby("MesNombre")["Tiempo de Uso"].sum().items()},
         "por_servicio": {k: int(v) for k, v in uso.groupby("Servicio")["Tiempo de Uso"].sum().items()},
+        "por_mes_nodo" : (
+            uso.groupby(["MesNombre", "Nodo"])["Tiempo de Uso"]
+            .sum().reset_index()
+            .rename(columns={"Tiempo de Uso": "minutos"})
+            .to_dict(orient="records")
+        ),
     }
 
     # ── Resumen general ──────────────────────────────────────────────────────
