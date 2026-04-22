@@ -81,13 +81,17 @@ TIPOS_ALUMNO = ["ESTUDIANTE PREGRADO", "ESTUDIANTE MAESTRIA", "ESTUDIANTE DOCTOR
 # ─── 1. Autenticación y lectura desde Google Sheets ─────────────────────────
 
 def get_spreadsheet() -> gspread.Spreadsheet:
-    #raw = os.environ.get("GOOGLE_CREDENTIALS")
-    #if not raw:
-    #    sys.exit("ERROR: Variable de entorno GOOGLE_CREDENTIALS no definida.")
-    #creds_dict = json.loads(raw)
-    #creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
-    CREDS_FILE = '../credentials.json'
-    creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+    raw = os.environ.get("GOOGLE_CREDENTIALS")
+    if raw:
+        try:
+            creds_dict = json.loads(raw)
+            creds = Credentials.from_service_account_info(creds_dict, scopes=SCOPES)
+        except json.JSONDecodeError:
+            sys.exit("ERROR: GOOGLE_CREDENTIALS no es un JSON válido.")
+    else:
+        CREDS_FILE = '../credentials.json'
+        creds = Credentials.from_service_account_file(CREDS_FILE, scopes=SCOPES)
+    
     client = gspread.authorize(creds)
     return client.open_by_key(SPREADSHEET_ID)
 
