@@ -325,6 +325,15 @@ def compute_metrics(sheets: dict) -> dict:
     mat_por_tipo  = {k: round(float(v), 2) for k, v in mat_uso.groupby("MaterialNorm")["Material empleado (g)"].sum().items()}
     mat_por_mes   = {str(k): round(float(v), 2) for k, v in mat_uso.groupby("MesNombre")["Material empleado (g)"].sum().items()}
     mat_por_treg  = {k: round(float(v), 2) for k, v in mat_uso.groupby("TipoRegistro")["Material empleado (g)"].sum().items()}
+
+    mat_uso["EsFabcore"] = mat_uso["Tipo de Servicio"].isin(["SUBVENCIONADO", "CONVENIO"])
+    mat_fabcore = mat_uso[mat_uso["EsFabcore"]]
+    mat_propio  = mat_uso[~mat_uso["EsFabcore"]]
+    mat_por_financiamiento = {
+        "fabcore": round(float(mat_fabcore["Material empleado (g)"].sum()), 2),
+        "propio" : round(float(mat_propio["Material empleado (g)"].sum()),  2),
+    }
+
     mat_por_mes_nodo = (uso.groupby(["MesNombre", "Nodo"])["Material empleado (g)"]
                         .sum().reset_index()
                         .rename(columns={"Material empleado (g)": "material"})
@@ -333,29 +342,49 @@ def compute_metrics(sheets: dict) -> dict:
 
     # ── Helper: tabla de material por entidad (código + nombre) ───────────────
     def tabla_mat(df):
-        """Devuelve lista de {codigo, nombre, PLA, Resina, Otros, total}"""
+        """Devuelve lista de {codigo, nombre, PLA_fab, PLA_propio,
+           Resina_fab, Resina_propio, total_fab, total_propio, total}"""
+        if df.empty:
+            return []
+        
         g = (
-            df.groupby(["CursoCodigo", "NombreCurso", "MaterialNorm"])["Material empleado (g)"]
-            .sum().reset_index()
+            df.groupby(["CursoCodigo", "NombreCurso", "MaterialNorm", "EsFabcore"])
+            ["Material empleado (g)"].sum().reset_index()
         )
         pivot = g.pivot_table(
             index=["CursoCodigo", "NombreCurso"],
-            columns="MaterialNorm", values="Material empleado (g)",
+            columns=["MaterialNorm", "EsFabcore"],
+            values="Material empleado (g)",
             aggfunc="sum", fill_value=0
-        ).reset_index()
-        pivot.columns.name = None
-        for col in ["PLA", "Resina", "Otros"]:
+        )
+        pivot.columns = [
+            f"{mat}_{'fab' if es_fab else 'propio'}"
+            for mat, es_fab in pivot.columns
+        ]
+        pivot = pivot.reset_index()
+
+        # Garantizar que todas las columnas existen
+        for col in ["PLA_fab", "PLA_propio", "Resina_fab", "Resina_propio",
+                "Otros_fab", "Otros_propio"]:
             if col not in pivot.columns:
                 pivot[col] = 0.0
-        pivot["total"] = pivot[["PLA", "Resina", "Otros"]].sum(axis=1)
+                
+        pivot["total_fab"]   = pivot[["PLA_fab",   "Resina_fab",   "Otros_fab"]].sum(axis=1)
+        pivot["total_propio"]= pivot[["PLA_propio", "Resina_propio","Otros_propio"]].sum(axis=1)
+        pivot["total"]       = pivot["total_fab"] + pivot["total_propio"]
         pivot = pivot.sort_values("total", ascending=False)
+        
         return [
             {
                 "codigo":  row["CursoCodigo"],
                 "nombre":  row["NombreCurso"],
-                "PLA":     round(float(row["PLA"]),   2),
-                "Resina":  round(float(row["Resina"]), 2),
-                "Otros":   round(float(row["Otros"]),  2),
+                "PLA_fab"      : round(float(row["PLA_fab"]),       2),
+                "PLA_propio"   : round(float(row["PLA_propio"]),    2),
+                "Resina_fab"   : round(float(row["Resina_fab"]),    2),
+                "Resina_propio": round(float(row["Resina_propio"]), 2),
+                "Otros"        : round(float(row["Otros_fab"])+float(row["Otros_propio"]), 2),
+                "total_fab"    : round(float(row["total_fab"]),     2),
+                "total_propio" : round(float(row["total_propio"]),  2),
                 "total":   round(float(row["total"]),  2),
             }
             for _, row in pivot.iterrows()
@@ -374,6 +403,7 @@ def compute_metrics(sheets: dict) -> dict:
         "por_mes"       : mat_por_mes,
         "por_mes_nodo"  : mat_por_mes_nodo,
         "por_tipo_registro": mat_por_treg,    # {Curso, Proyecto, Tesis}
+        "por_financiamiento": mat_por_financiamiento,
         # Tablas desglosadas por tipo de registro
         "cursos"        : tabla_mat(df_cursos),
         "proyectos"     : tabla_mat(df_proyectos),

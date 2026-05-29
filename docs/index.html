@@ -195,7 +195,12 @@
       </div>
       <div class="table-wrap">
         <table>
-          <thead><tr><th>#</th><th>Código</th><th>Nombre</th><th style="text-align:right">PLA</th><th style="text-align:right">Resina</th><th style="text-align:right">Total</th></tr></thead>
+          <thead><tr><th>#</th><th>Código</th><th>Nombre</th>
+			<th style="text-align:right;color:#3b82f6">PLA Fab</th>
+			<th style="text-align:right;color:#94a3b8">PLA Propio</th>
+			<th style="text-align:right;color:#10b981">Resina Fab</th>
+			<th style="text-align:right">Total Fab</th>
+			<th style="text-align:right">Total</th>
           <tbody id="tbMaterial"></tbody>
         </table>
       </div>
@@ -456,17 +461,24 @@ function render(nodo, mes){
     $("tbMaterial").innerHTML = rows.map((r,i)=>{
       const pct = v => Math.round((v/maxTotal)*80);
       const fmt = v => v > 0 ? num_format(v, 1) : "—";
-      const barPLA    = r.PLA   >0 ? `<span class="mat-bar" style="width:${pct(r.PLA)}px;background:#3b82f6"></span>` : "";
-      const barResina = r.Resina>0 ? `<span class="mat-bar" style="width:${pct(r.Resina)}px;background:#10b981"></span>` : "";
-      return `<tr>
-        <td style="color:#475569;font-size:.75rem;width:28px">${i+1}</td>
-        <td><code style="color:#94a3b8;font-size:.74rem">${r.codigo}</code></td>
-        <td style="font-size:.82rem;font-weight:500">${r.nombre}</td>
-        <td style="text-align:right;white-space:nowrap">${barPLA}<span style="color:#3b82f6">${fmt(r.PLA)} g</span></td>
-        <td style="text-align:right;white-space:nowrap">${barResina}<span style="color:#10b981">${fmt(r.Resina)} g</span></td>
-        <td style="text-align:right;font-weight:600">${fmt(r.total)} g</td>
-      </tr>`;
-    }).join("");
+      const barFab = r.total_fab > 0
+      ? `<span class="mat-bar" style="width:${pct(r.total_fab)}px;background:#6366f1"></span>`
+      : "";
+    // Indicador visual: si tiene material propio significativo → candidato a convenio
+    const badge  = (r.total_propio > 1000 && r.total_fab === 0)
+      ? `<span class="badge badge-amber" title="Alto uso propio — candidato a convenio">★</span> `
+      : "";
+    return `<tr>
+      <td style="color:#475569;font-size:.75rem">${i + 1}</td>
+      <td><code style="color:#94a3b8;font-size:.74rem">${r.codigo}</code></td>
+      <td style="font-size:.82rem;font-weight:500">${badge}${r.nombre}</td>
+      <td style="text-align:right;color:#3b82f6">${fmt(r.PLA_fab)}</td>
+      <td style="text-align:right;color:#64748b">${fmt(r.PLA_propio)}</td>
+      <td style="text-align:right;color:#10b981">${fmt(r.Resina_fab)}</td>
+      <td style="text-align:right;white-space:nowrap">${barFab}<b>${fmt(r.total_fab)}</b></td>
+      <td style="text-align:right;font-weight:600">${fmt(r.total)}</td>
+    </tr>`;
+  }).join("");
     document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
   }
 
