@@ -1,27 +1,17 @@
-# Quarto
-/.quarto/
-/*_files/
-/*_cache/
-_site/
-_site/*
-#*.html
-**/*.quarto_ipynb
+# Credenciales — nunca subir
+credentials.json
 
-# VS Code
-#.vscode/settings.json
+# Datos generados automáticamente
+docs/data/metrics.json
+
+# Visual studio
+.vs/
 
 # Python
 __pycache__/
-.venv/
 *.pyc
+*.pyo
 
-# Data
-data/FabCore_Usage_Data_Expanded.csv
-data/Processed_Dashboard_Data.csv
-data/PythonTest_RegistroUso.csv
-data/PythonTest_Usuarios.csv
-data/PythonTest_Cursos.csv
-
-# OS
+# Sistema operativo
 .DS_Store
 Thumbs.db

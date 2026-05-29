@@ -1,77 +1,46 @@
-# FabCore Dashboard 2026
+# Fabcore Dashboard
 
-Interactive dashboard for managing academic manufacturing projects at FabCore Lab.
+Dashboard de métricas operativas de **Fabcore PUCP**, publicado en GitHub Pages y actualizado automáticamente cada día.
 
-## Tech stack
-- Quarto
-- Python
-- Git + GitHub
+## Vista del dashboard
 
-## Requirements
-Before you start, download and extract these portable tools:
+El dashboard está disponible en la URL de GitHub Pages de este repositorio.
 
-1. **Python 3.x** (pick one):
-   - Option A: [WinPython](https://winpython.github.io/) - Recommended
-   - Option B: System Python from [python.org](https://www.python.org)
+## Estructura
 
-2. **Git** - [Portable Git](https://git-scm.com/download/win)
-   - Extract to: `D:\Portables\Git`
+```
+.github/workflows/   ← Automatización
+docs/                ← Sitio web público
+scripts/             ← Procesamiento de datos
+```
 
-3. **Quarto** - [Download Quarto](https://quarto.org/docs/get-started/)
-   - Extract to: `D:\Portables\Quarto-1.8.27-win`
+## Actualización de datos
 
+Los datos se actualizan automáticamente todos los días a las **6:00 AM (Lima)**. También pueden actualizarse manualmente desde **Actions → Run workflow**.
 
-## Setup (First Time Only)
+## Depuración local
 
-1. **Clone the repository:**
-   ```powershell
-   git clone <your-repo-url>
-   cd Dashboard2026
-   ```
+### Requisitos
 
-2. **Create virtual environment:**
-   ```powershell
-   python -m venv .venv
-   ```
-   But if you are using a portable WinPython
-    ```powershell
-  [Path-to-Portable-Python]\python.exe -m venv .venv
-   ```
-3. **Activate virtual environment:**
-   ```powershell
-   .\.venv\Scripts\activate
-   ```
+- Anaconda
+- Archivo `credentials.json` en la raíz del proyecto (acceso restringido)
 
-4. **Install dependencies:**
-   ```powershell
-   pip install -r requirements.txt
-   ```
+### Pasos
 
-5. **Create a unique kernell:**
-   ```powershell
-   .\.venv\Scripts\python.exe -c "import sys; print(sys.executable); print(sys.version)"
-   ```
+```bash
+# Crear y activar entorno
+conda create -n FabcoreMetrics python=3.11 -y
+conda activate FabcoreMetrics
 
-## How to run
-1. Press `Ctrl + Shift + B` or click Preview (requieres Quarto extension for VS Code)
+# Instalar dependencias
+pip install gspread google-auth pandas openpyxl
 
-- Otherwise, for directly browser viewing:
-    ```powershell 
-    quarto preview index.qmd --to dashboard ```
-## To Stop
+# Generar datos
+python scripts/fabcore_fetch_and_build.py
 
-Press `Ctrl + C` in the terminal
-## Notes
-- No admin permissions required (except for virtual environment if needed)
-- Tools live in `D:\Portables`
+# Previsualizar en el navegador
+python -m http.server 8080 --directory docs
+# → http://localhost:8080
+```
 
-## Workspace Settings
-
-Portable tool paths are pre-configured in `.vscode/settings.json`
-
-## Status
-🚧 In development
-
-## Author
-Sandra Mozombite Shishco
-(moshivuu)
+> El archivo `credentials.json` es de uso interno y no debe subirse al repositorio.
