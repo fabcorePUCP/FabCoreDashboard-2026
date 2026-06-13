@@ -439,7 +439,7 @@ function render(nodo, mes){
   if(capMap.length===0){ emptyMsg("cCap"); }
   else{
     showCanvas("cCap");
-    mk("cCap",{type:"bar",data:{labels:capMap.map(([k])=>{const p=k.split(" - ");return p[1]||k;}),datasets:[{data:capMap.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capMap.length),borderWidth:0,borderRadius:6}]},
+    mk("cCap",{type:"bar",data:{labels:capMap.map(([k])=>{const idx = k.indexOf(" - "); return idx>=0 ? k.slice(idx+3) : k; }),datasets:[{data:capMap.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capMap.length),borderWidth:0,borderRadius:6}]},
       options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
         scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc()}}}});
   }
