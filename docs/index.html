@@ -24,6 +24,7 @@
   .filters select{background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:.84rem;cursor:pointer;min-width:155px;}
   .filters select:focus{outline:none;border-color:var(--accent);}
   #lastUpdate{margin-left:auto;font-size:.74rem;color:var(--muted);align-self:center;}
+  .filter-pill{font-size:.72rem;color:var(--accent);background:var(--accent)20;border:1px solid var(--accent)40;border-radius:20px;padding:3px 11px;display:none;align-self:center;}
 
   main{padding:22px 32px;}
 
@@ -45,7 +46,9 @@
 
   /* Nodo cards */
   .nodos{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:24px;}
-  .nodo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+  .nodo-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;transition:opacity .15s, transform .1s;}
+  .nodo-card.dimmed{opacity:.35;}
+  .nodo-card.active{outline:1px solid var(--accent);}
   .nodo-card .nname{font-size:.88rem;font-weight:600;margin-bottom:7px;}
   .nodo-card .nvals{display:flex;gap:14px;font-size:.74rem;color:var(--muted);flex-wrap:wrap;}
   .nodo-card .nvals span b{display:block;color:var(--text);font-size:1.1rem;font-weight:700;}
@@ -61,6 +64,7 @@
   .chart-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:20px;}
   .chart-card h3{font-size:.74rem;color:var(--muted);margin-bottom:13px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;}
   .chart-card canvas{max-height:255px;}
+  .chart-card .empty-msg{color:var(--muted);font-size:.8rem;text-align:center;padding:40px 0;}
   .wide{grid-column:1/-1;}
 
   /* Tables */
@@ -69,6 +73,7 @@
   th{padding:7px 11px;text-align:left;color:var(--muted);border-bottom:1px solid var(--border);font-weight:600;font-size:.7rem;text-transform:uppercase;position:sticky;top:0;background:var(--card);z-index:1;}
   td{padding:7px 11px;border-bottom:1px solid rgba(255,255,255,.04);}
   tr:last-child td{border-bottom:none;} tr:hover td{background:rgba(255,255,255,.025);}
+  .empty-row td{text-align:center;color:var(--muted);padding:24px;}
 
   /* Badge */
   .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:.68rem;font-weight:600;}
@@ -91,24 +96,23 @@
   .hm-cell:hover{opacity:.75;}
   .hm-label-hora{color:var(--muted);font-size:.68rem;text-align:center;padding-bottom:4px;}
   .hm-label-dia{color:var(--muted);font-size:.72rem;text-align:right;padding-right:8px;white-space:nowrap;}
-  
+
   /* Barras laterales del Heatmap */
   .hm-bar-cell {
     padding-right: 12px;
     vertical-align: middle;
-    width: 200px; /* Espacio fijo reservado para las barras */
+    width: 200px;
   }
   .hm-bar-wrapper {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 16px; /* Para que sea un poco más baja que la celda de 28px */
+    height: 16px;
   }
   .hm-bar-fill {
     height: 100%;
     background: linear-gradient(90deg, var(--card), var(--border) 60%, var(--fab1));
     border-radius: 3px;
-    /* El width se inyectará en línea (inline style) por cada fila */
   }
   .hm-bar-text {
     font-size: .68rem;
@@ -130,6 +134,7 @@
 <div class="filters" id="filtersBar" style="display:none">
   <label>Nodo<select id="filtroNodo"><option value="todos">Todos los nodos</option></select></label>
   <label>Mes<select id="filtroMes"><option value="todos">Todos los meses</option></select></label>
+  <span class="filter-pill" id="filterPill"></span>
   <span id="lastUpdate"></span>
 </div>
 
@@ -150,7 +155,7 @@
       <div class="chart-card wide"><h3>Atenciones a alumnos por mes y nodo</h3><canvas id="cMesNodo"></canvas></div>
     </div>
     <div class="charts" style="margin-top:18px">
-      <div class="chart-card"><h3>Top 8 carreras — alumnos asistidos</h3><canvas id="cCarreras"></canvas></div>
+      <div class="chart-card"><h3>Top carreras — alumnos asistidos</h3><canvas id="cCarreras"></canvas></div>
       <div class="chart-card"><h3>Capacitaciones por tipo</h3><canvas id="cCap"></canvas></div>
     </div>
 
@@ -178,9 +183,9 @@
     </div>
 
     <!-- ══ 7. MATERIAL ═════════════════════════════════════════════════════ -->
-    <div class="stitle">Material Empleado (PLA y Resina)</div>
+    <div class="stitle">Material Empleado (PLA, Resina y Concreto)</div>
     <div class="charts">
-      <div class="chart-card"><h3>PLA vs Resina — distribución global</h3><canvas id="cMatTipo"></canvas></div>
+      <div class="chart-card"><h3>PLA vs Resina — distribución</h3><canvas id="cMatTipo"></canvas></div>
       <div class="chart-card"><h3>Material por tipo de registro</h3><canvas id="cMatTipoReg"></canvas></div>
       <div class="chart-card"><h3>Material por nodo <span id="matNodoUnit" style="color:#6366f1"></span></h3><canvas id="cMatNodo"></canvas></div>
     </div>
@@ -188,19 +193,20 @@
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:10px">
         <h3 style="margin:0">Desglose por curso · proyecto · tesis</h3>
         <div style="display:flex;gap:6px" id="matTabs">
-          <button class="tab-btn active" data-tab="cursos">Cursos</button>
-          <button class="tab-btn" data-tab="proyectos">Proyectos</button>
-          <button class="tab-btn" data-tab="tesis">Tesis</button>
+          <button class="tab-btn active" data-tab="Curso">Cursos</button>
+          <button class="tab-btn" data-tab="Proyecto">Proyectos</button>
+          <button class="tab-btn" data-tab="Tesis">Tesis</button>
         </div>
       </div>
       <div class="table-wrap">
         <table>
           <thead><tr><th>#</th><th>Código</th><th>Nombre</th>
-			<th style="text-align:right;color:#3b82f6">PLA Fab</th>
-			<th style="text-align:right;color:#94a3b8">PLA Propio</th>
-			<th style="text-align:right;color:#10b981">Resina Fab</th>
-			<th style="text-align:right">Total Fab</th>
-			<th style="text-align:right">Total</th>
+            <th style="text-align:right;color:#3b82f6">PLA Fab</th>
+            <th style="text-align:right;color:#94a3b8">PLA Propio</th>
+            <th style="text-align:right;color:#10b981">Resina Fab</th>
+			<th style="text-align:right;color:#10b981">Resina Propio</th>
+            <th style="text-align:right">Total Fab</th>
+            <th style="text-align:right">Total</th></tr></thead>
           <tbody id="tbMaterial"></tbody>
         </table>
       </div>
@@ -250,16 +256,60 @@ const NODO_CLASS = {
   "Fab1-Aditiva":"n1","Fab2-Bioimpresión":"n2","Fab3-Digital":"n3","Fab4-Construcción":"n4"
 };
 const PALETTE = ["#6366f1","#3b82f6","#10b981","#f59e0b","#ef4444","#8b5cf6","#06b6d4","#ec4899","#f97316","#14b8a6"];
-const MAT_COLOR = {"PLA":"#3b82f6","Resina 1":"#10b981","Resina Estandar":"#6366f1","PETG":"#f59e0b","TPU":"#ec4899","OTROS":"#6b7280","NINGUNO":"#334155"};
 const MESES_ORDER = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DIAS_ORDER  = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
+const FAB4 = "Fab4-Construcción";
 
-let M = null, charts = {};
+let M = null, charts = {}, matTab = "Curso";
 const $ = id => document.getElementById(id);
 const gc = () => ({color:"rgba(255,255,255,.06)"});
 const tc = (sz=11) => ({color:"#94a3b8",font:{size:sz}});
 const lc = () => ({labels:{color:"#e2e8f0",font:{size:11},boxWidth:12}});
 
+const num_format = (num, decimales = 0) => (num||0).toLocaleString('es-PE', {
+  minimumFractionDigits: decimales, maximumFractionDigits: decimales
+});
+
 function mk(id,cfg){ if(charts[id]) charts[id].destroy(); charts[id]=new Chart($(id).getContext("2d"),cfg); }
+
+// ── Helpers de agregación genéricos (operan sobre arrays ya filtrados) ──────
+function groupCount(rows, key){
+  const m = new Map();
+  for(const r of rows){ const k=r[key]; if(k==null||k==="") continue; m.set(k,(m.get(k)||0)+1); }
+  return m;
+}
+function groupSum(rows, key, valKey){
+  const m = new Map();
+  for(const r of rows){ const k=r[key]; if(k==null||k==="") continue; m.set(k,(m.get(k)||0)+(r[valKey]||0)); }
+  return m;
+}
+function groupNuniq(rows, key, idKey){
+  const m = new Map();
+  for(const r of rows){
+    const k=r[key]; if(k==null||k==="") continue;
+    if(!m.has(k)) m.set(k, new Set());
+    m.get(k).add(r[idKey]);
+  }
+  const out = new Map();
+  for(const [k,set] of m) out.set(k, set.size);
+  return out;
+}
+function nuniq(rows, idKey){ return new Set(rows.map(r=>r[idKey])).size; }
+function sortMapDesc(m){ return [...m.entries()].sort((a,b)=>b[1]-a[1]); }
+function emptyMsg(canvasId, msg){
+  const card = $(canvasId).closest(".chart-card");
+  $(canvasId).style.display="none";
+  let e = card.querySelector(".empty-msg");
+  if(!e){ e=document.createElement("div"); e.className="empty-msg"; card.appendChild(e); }
+  e.textContent = msg || "Sin datos para el filtro seleccionado";
+  e.style.display="";
+}
+function showCanvas(canvasId){
+  $(canvasId).style.display="";
+  const card = $(canvasId).closest(".chart-card");
+  const e = card.querySelector(".empty-msg");
+  if(e) e.style.display="none";
+}
 
 async function load(){
   try{
@@ -275,367 +325,260 @@ async function load(){
   }
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+// RENDER PRINCIPAL — todo se recalcula a partir de M filtrado por nodo/mes
+// ─────────────────────────────────────────────────────────────────────────
 function render(nodo, mes){
   const m = M;
-  const nodos = m.resumen.nodos || Object.keys(NODO_COLOR).slice(0,4);
-  
-  // - Formato de Texto numerico
-  const num_format = (num, decimales = 0) => {
-    return num.toLocaleString('es-PE', {
-	  minimumFractionDigits: decimales, // Fuerza a que haya siempre 'X' decimales (rellena con ceros)
-	  maximumFractionDigits: decimales  // Evita que haya más de 'X' decimales
-	});
-  };
+  const nodos = m.referencia.nodos;
+  const TIPOS_ALUMNO = new Set(m.referencia.tipos_alumno);
+  const TIPOS_DOC_JP = new Set(m.referencia.tipos_doc_jp);
+
+  // ── Filtro base (atenciones) ──────────────────────────────────────────────
+  const passF = r => (nodo==="todos"||r.nodo===nodo) && (mes==="todos"||r.mes===mes);
+  const atAll = m.atenciones.filter(passF);
+  const capAll = m.capacitaciones.filter(passF);
+
+  const alumnosRows = atAll.filter(r=>TIPOS_ALUMNO.has(r.tipo_usuario));
+  const docjpRows   = atAll.filter(r=>TIPOS_DOC_JP.has(r.tipo_usuario));
+
+  // Material: separar fila normal (g) vs concreto (kg, almacenado en g)
+  const matRows = atAll.filter(r=>r.material_g>0);
+
+  // ── Filter pill ────────────────────────────────────────────────────────────
+  const pill = $("filterPill");
+  if(nodo==="todos" && mes==="todos"){ pill.style.display="none"; }
+  else{
+    const parts=[]; if(nodo!=="todos") parts.push(nodo); if(mes!=="todos") parts.push(mes);
+    pill.textContent = "Filtrando: "+parts.join(" · ");
+    pill.style.display="";
+  }
 
   // ── KPIs globales ──────────────────────────────────────────────────────────
-  const f = rows=>{let r=rows;if(nodo!=="todos")r=r.filter(x=>x.Nodo===nodo);if(mes!=="todos")r=r.filter(x=>x.MesNombre===mes);return r;};
-  
-  //caso de alumnos.  Evita duplicidad
-  let alumnos = 0;
-  
-  
-  if (nodo === "todos" && mes === "todos") {
-    // Caso 1: Todo el año, todos los nodos (Lee el total global único)
-    alumnos = m.alumnos_asistidos.total || 0;
-  } else if (nodo !== "todos" && mes === "todos") {
-    // Caso 2: Todo el año, nodo específico (Lee el total único del nodo)
-    alumnos = m.alumnos_asistidos.por_nodo[nodo] || 0;
-  } else if (nodo === "todos" && mes !== "todos") {
-    // Caso 3: Mes específico, todos los nodos (Lee el total único del mes)
-    alumnos = m.alumnos_asistidos.por_mes[mes] || 0;
-  } else {
-    // Caso 4: Mes específico y nodo específico (Busca el cruce exacto)
-    const record = m.alumnos_asistidos.por_mes_nodo.find(
-      x => x.Nodo === nodo && x.MesNombre === mes
-    );
-    alumnos = record ? record.alumnos : 0;
-  }
-  
-  const atenciones = (nodo==="todos"&&mes==="todos") ? m.atenciones.total
-    : f(m.atenciones.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
-  const atenciones_doc_jp = (nodo==="todos"&&mes==="todos") ? m.atenciones_doc_jp.total_registros
-    : f(m.atenciones_doc_jp.por_mes_nodo).reduce((s,r)=>s+r.atenciones,0);
-  let material = (nodo==="todos"&&mes==="todos") ? m.material.total_gramos
-    : f(m.material.por_mes_nodo).reduce((s,r)=>s+r.material,0);
-  const minutos = (nodo==="todos"&&mes==="todos") ? m.tiempo_uso_minutos.total
-    : f(m.tiempo_uso_minutos.por_mes_nodo).reduce((s,r)=>s+r.minutos,0);
-  const convenios = (nodo!=="todos") ? (m.convenios.por_nodo[nodo]||0) : m.convenios.total;
-  const docentes_vinculados = (nodo!=="todos") ? (m.docentes_vinculados.por_nodo[nodo]||0) : m.docentes_vinculados.total;
-  const cap = (mes!=="todos") ? (m.capacitaciones.alumnos_unicos_por_mes[mes]||0) : m.capacitaciones.alumnos_unicos;
-  if (nodo==="Fab4-Construcción") {material = material*1000;}
+  const alumnosUnicos = nuniq(alumnosRows, "codigo_hash");
+  const atenciones = atAll.length;
+  const atencionesDocJP = docjpRows.length;
+  const docentesUnicos = nuniq(docjpRows.filter(r=>r.tipo_usuario==="DOCENTE"), "codigo_hash");
+  const predocUnicos   = nuniq(docjpRows.filter(r=>r.tipo_usuario==="PREDOCENTE"), "codigo_hash");
+
+  // Material total: gramos "normales" + gramos-de-concreto (mostrados en kg aparte)
+  const matNormal  = matRows.filter(r=>!r.es_concreto).reduce((s,r)=>s+r.material_g,0);
+  const matConcretoG = matRows.filter(r=>r.es_concreto).reduce((s,r)=>s+r.material_g,0);
+
+  const minutos = atAll.reduce((s,r)=>s+(r.tiempo_min||0),0);
+
+  // Docentes vinculados / convenios — filtrados solo por nodo (no tienen mes)
+  const docVinc = nodo==="todos" ? m.docentes_vinculados : m.docentes_vinculados.filter(d=>d.nodo===nodo);
+  const convFiltrados = nodo==="todos" ? m.convenios : m.convenios.filter(c=>c.nodo===nodo);
+
+  // Capacitaciones: alumnos únicos
+  const capAlumnos = nuniq(capAll, "codigo_hash");
 
   $("kpis").innerHTML=`
-    <div class="kpi c1"><div class="lbl">Alumnos asistidos</div><div class="val">${alumnos}</div><div class="sub">alumnos únicos con atención</div></div>
+    <div class="kpi c1"><div class="lbl">Alumnos asistidos</div><div class="val">${alumnosUnicos}</div><div class="sub">alumnos únicos con atención</div></div>
     <div class="kpi c2"><div class="lbl">Total atenciones</div><div class="val">${atenciones}</div><div class="sub">registros de uso de equipos</div></div>
-    <div class="kpi c3"><div class="lbl">Alumnos capacitados</div><div class="val">${cap}</div><div class="sub">participantes únicos en CAPs</div></div>
-    <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docentes_vinculados}</div><div class="sub">docentes con apoyo registrado</div></div>
-    <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convenios}</div><div class="sub">cursos con convenio activo</div></div>
-    <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atenciones_doc_jp}</div><div class="sub">${m.atenciones_doc_jp.docentes_unicos} doc · ${m.atenciones_doc_jp.predocentes_unicos} JP únicos</div></div>
-    <div class="kpi cc"><div class="lbl">Material empleado</div><div class="val">${(material/1000).toFixed(1)}kg</div><div class="sub">${num_format(material)} g total</div></div>
+    <div class="kpi c3"><div class="lbl">Alumnos capacitados</div><div class="val">${capAlumnos}</div><div class="sub">participantes únicos en CAPs</div></div>
+    <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docVinc.length}</div><div class="sub">docentes con apoyo registrado</div></div>
+    <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convFiltrados.length}</div><div class="sub">cursos con convenio activo</div></div>
+    <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atencionesDocJP}</div><div class="sub">${docentesUnicos} doc · ${predocUnicos} JP únicos</div></div>
+    <div class="kpi cc"><div class="lbl">Material (g)</div><div class="val">${(matNormal/1000).toFixed(1)}kg</div><div class="sub">${num_format(matNormal,0)} g · PLA/Resina/Otros</div></div>
     <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${num_format(Math.round(minutos/60))}h</div><div class="sub">horas de uso de equipos</div></div>`;
 
   // ── Nodo cards ─────────────────────────────────────────────────────────────
-  $("nodos").innerHTML = nodos.map(n=>`
-    <div class="nodo-card ${NODO_CLASS[n]||''}">
+  $("nodos").innerHTML = nodos.map(n=>{
+    const atN = m.atenciones.filter(r=>r.nodo===n && (mes==="todos"||r.mes===mes));
+    const alN = atN.filter(r=>TIPOS_ALUMNO.has(r.tipo_usuario));
+    const matN = atN.filter(r=>r.material_g>0);
+    const matNormalN = matN.filter(r=>!r.es_concreto).reduce((s,r)=>s+r.material_g,0);
+    const matConcretoN = matN.filter(r=>r.es_concreto).reduce((s,r)=>s+r.material_g,0);
+    const minN = atN.reduce((s,r)=>s+(r.tiempo_min||0),0);
+    const convN = m.convenios.filter(c=>c.nodo===n).length;
+    const docN = m.docentes_vinculados.filter(d=>d.nodo===n).length;
+
+    const matLabel = matConcretoN>0
+      ? `${num_format(matConcretoN/1000,1)}kg concreto`
+      : (matNormalN>0 ? `${num_format(matNormalN)}g` : null);
+
+    const dim = (nodo!=="todos" && nodo!==n) ? "dimmed" : "";
+    const act = (nodo===n) ? "active" : "";
+
+    return `<div class="nodo-card ${NODO_CLASS[n]||''} ${dim} ${act}">
       <div class="nname" style="color:${NODO_COLOR[n]||'#e2e8f0'}">${n}</div>
       <div class="nvals">
-        <span><b>${m.alumnos_asistidos.por_nodo[n]||0}</b>alumnos</span>
-        <span><b>${m.atenciones.por_nodo[n]||0}</b>atenc.</span>
-        <span><b>${m.convenios.por_nodo[n]||0}</b>convenios</span>
-        <span><b>${m.docentes_vinculados.por_nodo[n]||0}</b>docentes</span>
-        <span><b>${num_format(Math.round((m.tiempo_uso_minutos.por_nodo[n]||0)/60))}h</b>uso</span>
-        ${(m.material.por_nodo[n]||0)>0 ? `<span><b>${n==="Fab4-Construcción" ? (num_format(m.material.por_nodo[n])+"kg") : (num_format(m.material.por_nodo[n])+"g")}</b>material</span>` : ""}
+        <span><b>${nuniq(alN,"codigo_hash")}</b>alumnos</span>
+        <span><b>${atN.length}</b>atenc.</span>
+        <span><b>${convN}</b>convenios</span>
+        <span><b>${docN}</b>docentes</span>
+        <span><b>${num_format(Math.round(minN/60))}h</b>uso</span>
+        ${matLabel ? `<span><b>${matLabel}</b>material</span>` : ""}
       </div>
-    </div>`).join("");
+    </div>`;
+  }).join("");
 
-  // ── Alumnos mes × nodo ────────────────────────────────────────────────────
-  const mP = MESES_ORDER.filter(ms=>m.alumnos_asistidos.por_mes[ms]);
-  mk("cMesNodo",{type:"bar",data:{labels:mP,datasets:nodos.map(n=>({
-    label:n, data:mP.map(ms=>{const r=m.alumnos_asistidos.por_mes_nodo.find(d=>d.MesNombre===ms&&d.Nodo===n);return r?r.alumnos:0;}),
+  // ── Alumnos: mes × nodo (gráfico apilado) ───────────────────────────────────
+  const mP = MESES_ORDER.filter(ms=>m.referencia.meses_con_actividad.includes(ms) && (mes==="todos"||mes===ms));
+  const nodosChart = nodo==="todos" ? nodos : [nodo];
+  mk("cMesNodo",{type:"bar",data:{labels:mP,datasets:nodosChart.map(n=>({
+    label:n,
+    data:mP.map(ms=>nuniq(m.atenciones.filter(r=>r.mes===ms && r.nodo===n && TIPOS_ALUMNO.has(r.tipo_usuario)),"codigo_hash")),
     backgroundColor:(NODO_COLOR[n]||"#6b7280")+"cc",borderColor:NODO_COLOR[n]||"#6b7280",borderWidth:1,borderRadius:4
   }))},options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
     scales:{x:{grid:gc(),ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
 
   // ── Servicios doughnut ────────────────────────────────────────────────────
-  const rawSvc={...m.atenciones.por_servicio};
-  if(rawSvc["OTROS"]!=null){rawSvc["Otros"]=(rawSvc["Otros"]||0)+rawSvc["OTROS"];delete rawSvc["OTROS"];}
-  mk("cServicio",{type:"doughnut",data:{labels:Object.keys(rawSvc),datasets:[{data:Object.values(rawSvc),backgroundColor:PALETTE,borderWidth:0}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{...lc(),position:"right"}}}});
-
-  // ── Capacitaciones ────────────────────────────────────────────────────────
-  const capE=Object.entries(m.capacitaciones.por_capacitacion);
-  mk("cCap",{type:"bar",data:{labels:capE.map(([k])=>k.split(" - ")[1]||k),datasets:[{data:capE.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capE.length),borderWidth:0,borderRadius:6}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc()}}}});
-
-  // ── Top carreras ──────────────────────────────────────────────────────────
-  const cMap={};
-  Object.entries(m.alumnos_asistidos.por_carrera).filter(([k])=>k!=="Sin carrera").forEach(([k,v])=>{
-    const n=k.toUpperCase().trim().replace(/INGENIERIA\b/,"INGENIERÍA").replace(/MECATRONICA\b/,"MECATRÓNICA").replace(/ELECTRONICA\b/,"ELECTRÓNICA");
-    cMap[n]=(cMap[n]||0)+v;
-  });
-  const topC=Object.entries(cMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
-  mk("cCarreras",{type:"bar",data:{labels:topC.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:topC.map(([,v])=>v),backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
-
-  // ── CONVENIOS ─────────────────────────────────────────────────────────────
-  const convNodos=Object.keys(m.convenios.por_nodo);
-  mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>m.convenios.por_nodo[n]||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
-
-  $("tbConvenios").innerHTML = m.convenios.detalle.map(d=>`
-    <tr>
-      <td><code style="color:#94a3b8;font-size:.75rem">${d.CODIGO}</code></td>
-      <td style="font-weight:500">${d.NOMBRE}</td>
-      <td><span style="color:${NODO_COLOR[d.Nodo]||'#94a3b8'}">${d.Nodo}</span></td>
-      <td style="color:#94a3b8">${d.fecha_convenio}</td>
-      <td style="color:#64748b;font-size:.76rem">${d.Notas}</td>
-    </tr>`).join("");
-
-  // ── MATERIAL POR CURSO ─────────────────────────────────────────────────────
-
-  const FAB4 = "Fab4-Construcción";
-  // Para tooltips de gráficos sin nodo explícito, siempre g
-  function fmtG(v){ return num_format(v, 1) + " g"; }
-
-  // Chart 1: barras por tipo de registro (Curso / Proyecto / Tesis) — valores en g
-  const trKeys = Object.keys(m.material.por_tipo_registro);
-  mk("cMatTipoReg",{type:"bar",
-    data:{labels:trKeys,datasets:[{
-      data:trKeys.map(k=>m.material.por_tipo_registro[k]),
-      backgroundColor:["#6366f1cc","#10b981cc","#f59e0bcc"],
-      borderColor:["#6366f1","#10b981","#f59e0b"],
-      borderWidth:1,borderRadius:6
-    }]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},
-      tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),callback:v=>fmtG(v)},beginAtZero:true}}}});
-
-  // Chart 2: doughnut PLA vs Resina (excluye Otros) — valores en g
-  const matPR = Object.entries(m.material.por_tipo).filter(([k])=>k==="PLA"||k==="Resina");
-  mk("cMatTipo",{type:"doughnut",
-    data:{labels:matPR.map(([k])=>k),datasets:[{data:matPR.map(([,v])=>v),
-      backgroundColor:["#3b82f6","#10b981"],borderWidth:0}]},
-    options:{responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{...lc(),position:"right"},
-        tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}}}});
-
-  // Chart 3: material por nodo — eje izquierdo g (Fab1/2/3), eje derecho kg (Fab4)
-  // Construimos dos datasets: uno para Fab1-3 (g), otro para Fab4 (kg)
-  const matNodosK = Object.keys(m.material.por_nodo);
-  const matFab4Val = (m.material.por_nodo[FAB4] || 0); // → kg para el eje
-  const matNodoLabels = matNodosK.map(n => n === FAB4 ? n + " (kg)" : n);
-  // Separamos en dos datasets para ejes distintos
-  const dsMatG  = { label:"g",  yAxisID:"yG",
-    data: matNodosK.map(n => n===FAB4 ? null : (m.material.por_nodo[n]||0)),
-    backgroundColor: matNodosK.map(n=>n===FAB4?"transparent":(NODO_COLOR[n]||"#6b7280")+"cc"),
-    borderColor:     matNodosK.map(n=>NODO_COLOR[n]||"#6b7280"), borderWidth:1, borderRadius:6 };
-  const dsMatKg = { label:"kg (Fab4)", yAxisID:"yKg",
-    data: matNodosK.map(n => n===FAB4 ? matFab4Val : null),
-    backgroundColor: (NODO_COLOR[FAB4]||"#ef4444")+"cc",
-    borderColor: NODO_COLOR[FAB4]||"#ef4444", borderWidth:1, borderRadius:6 };
-  mk("cMatNodo",{type:"bar",
-    data:{labels:matNodoLabels, datasets:[dsMatG, dsMatKg]},
-    options:{responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false},
-        tooltip:{callbacks:{label:ctx=> ctx.dataset.yAxisID==="yKg"
-          ? " Fab4: "+num_format(ctx.raw,1)+" kg"
-          : " "+ctx.label+": "+fmtG(ctx.raw)}}},
-      scales:{
-        x:{grid:{display:false},ticks:tc()},
-        yG: {type:"linear",position:"left", grid:gc(), ticks:{...tc(),callback:v=>v>=1000?(v/1000)+"k g":v+" g"}, beginAtZero:true},
-        yKg:{type:"linear",position:"right",grid:{display:false}, ticks:{...tc(),callback:v=>v+" kg"}, beginAtZero:true}
-      }}});
-  // Actualiza el subtítulo dinámico
-  const unitEl = document.getElementById("matNodoUnit");
-  if(unitEl) unitEl.textContent = "— Fab1/2/3 en g · Fab4 en kg";
-
-  // Tabla con tabs: cursos / proyectos / tesis
-  // Las filas del JSON ya están normalizadas a g (Fab4 se multiplicó ×1000 en el worker).
-  // En la tabla mostramos siempre en g, ya que la tabla es por curso (sin nodo específico).
-  function renderMatTable(tab){
-    const rows = m.material[tab];
-    const maxTotal = rows.length ? Math.max(...rows.map(r=>r.total)) : 1;
-    $("tbMaterial").innerHTML = rows.map((r,i)=>{
-      const pct = v => Math.round((v/maxTotal)*80);
-      const fmt = v => v > 0 ? num_format(v, 1) : "—";
-      const barFab = r.total_fab > 0
-      ? `<span class="mat-bar" style="width:${pct(r.total_fab)}px;background:#6366f1"></span>`
-      : "";
-    // Indicador visual: si tiene material propio significativo → candidato a convenio
-    const badge  = (r.total_propio > 1000 && r.total_fab === 0)
-      ? `<span class="badge badge-amber" title="Alto uso propio — candidato a convenio">★</span> `
-      : "";
-    return `<tr>
-      <td style="color:#475569;font-size:.75rem">${i + 1}</td>
-      <td><code style="color:#94a3b8;font-size:.74rem">${r.codigo}</code></td>
-      <td style="font-size:.82rem;font-weight:500">${badge}${r.nombre}</td>
-      <td style="text-align:right;color:#3b82f6">${fmt(r.PLA_fab)}</td>
-      <td style="text-align:right;color:#64748b">${fmt(r.PLA_propio)}</td>
-      <td style="text-align:right;color:#10b981">${fmt(r.Resina_fab)}</td>
-      <td style="text-align:right;white-space:nowrap">${barFab}<b>${fmt(r.total_fab)}</b></td>
-      <td style="text-align:right;font-weight:600">${fmt(r.total)}</td>
-    </tr>`;
-  }).join("");
-    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===tab));
+  const svcMap = groupCount(atAll, "servicio");
+  if(svcMap.size===0){ emptyMsg("cServicio"); }
+  else{
+    showCanvas("cServicio");
+    mk("cServicio",{type:"doughnut",data:{labels:[...svcMap.keys()],datasets:[{data:[...svcMap.values()],backgroundColor:PALETTE,borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{...lc(),position:"right"}}}});
   }
 
-  renderMatTable("cursos");
-  document.getElementById("matTabs").addEventListener("click", e=>{
-    if(e.target.dataset.tab) renderMatTable(e.target.dataset.tab);
-  });
+  // ── Capacitaciones por tipo ────────────────────────────────────────────────
+  const capMap = sortMapDesc(groupCount(capAll, "capacitacion"));
+  if(capMap.length===0){ emptyMsg("cCap"); }
+  else{
+    showCanvas("cCap");
+    mk("cCap",{type:"bar",data:{labels:capMap.map(([k])=>{const p=k.split(" - ");return p[1]||k;}),datasets:[{data:capMap.map(([,v])=>v),backgroundColor:PALETTE.slice(0,capMap.length),borderWidth:0,borderRadius:6}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+        scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc()}}}});
+  }
 
-  // ── ATENCIONES DOC / JP ───────────────────────────────────────────────────
-  const djMeses = MESES_ORDER.filter(ms=>m.atenciones_doc_jp.por_mes[ms]);
-  mk("cDocJPMes",{type:"bar",data:{
-    labels:djMeses,
-    datasets:["DOCENTE","PREDOCENTE"].map((tipo,i)=>({
-      label:tipo,
-      data:djMeses.map(ms=>{const r=m.atenciones_doc_jp.por_mes_tipo.find(d=>d.MesNombre===ms&&d["Tipo de Usuario"]===tipo);return r?r.atenciones:0;}),
-      backgroundColor:[PALETTE[0]+"cc",PALETTE[1]+"cc"][i],
-      borderColor:[PALETTE[0],PALETTE[1]][i],borderWidth:1,borderRadius:4
-    }))
-  },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
-    scales:{x:{grid:gc(),ticks:tc(),stacked:true},y:{grid:gc(),ticks:tc(),beginAtZero:true,stacked:true}}}});
+  // ── Top carreras — alumnos asistidos ──────────────────────────────────────
+  const carreraMap = groupNuniq(alumnosRows.filter(r=>r.carrera!=="Sin carrera"), "carrera", "codigo_hash");
+  const topC = sortMapDesc(carreraMap).slice(0,8);
+  if(topC.length===0){ emptyMsg("cCarreras"); }
+  else{
+    showCanvas("cCarreras");
+    mk("cCarreras",{type:"bar",data:{labels:topC.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:topC.map(([,v])=>v),backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+        scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+  }
 
-  // ── DOCENTES VINCULADOS ───────────────────────────────────────────────────
-  $("kpisDocentes").innerHTML=`
-    <div class="kpi c1"><div class="lbl">Total vinculados</div><div class="val">${m.docentes_vinculados.total}</div><div class="sub">docentes únicos registrados</div></div>
-    <div class="kpi ca"><div class="lbl">Convenio de curso</div><div class="val">${m.docentes_vinculados.convenio}</div><div class="sub">vínculos por convenio</div></div>
-    <div class="kpi c3"><div class="lbl">Asesor de tesis</div><div class="val">${m.docentes_vinculados.asesor_tesis}</div><div class="sub">apoyos de asesoría</div></div>
-    <div class="kpi c2"><div class="lbl">Apoyo a curso</div><div class="val">${m.docentes_vinculados.apoyo_curso}</div><div class="sub">otros apoyos registrados</div></div>`;
+  // ── TASA DE RETORNO ────────────────────────────────────────────────────────
+  const visitas = new Map();
+  for(const r of alumnosRows){ visitas.set(r.codigo_hash, (visitas.get(r.codigo_hash)||0)+1); }
+  const totalAl = visitas.size;
+  const recurrentes = [...visitas.values()].filter(v=>v>1).length;
+  const unicos = totalAl - recurrentes;
+  const tasaPct = totalAl ? Math.round(recurrentes/totalAl*1000)/10 : 0;
+  const maxVisitas = totalAl ? Math.max(...visitas.values()) : 0;
 
-  const dNodos=Object.keys(m.docentes_vinculados.por_nodo);
-  mk("cDocNodo",{type:"bar",data:{labels:dNodos,datasets:[{data:dNodos.map(n=>m.docentes_vinculados.por_nodo[n]),backgroundColor:dNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:dNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
-    options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
-
-  const dCarreras=Object.entries(m.docentes_vinculados.por_carrera).slice(0,8);
-  mk("cDocCarrera",{type:"bar",data:{labels:dCarreras.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:dCarreras.map(([,v])=>v),backgroundColor:PALETTE[4]+"cc",borderColor:PALETTE[4],borderWidth:1,borderRadius:4}]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
-      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
-
-  // Tabla docentes con badge de tipo de apoyo
-  const tipoApoyo = d=>{
-    const a=d.Apoyo||"";
-    if(/Convenio|convenio/.test(a)) return '<span class="badge badge-blue">Convenio</span>';
-    if(/[Aa]sesor/.test(a))         return '<span class="badge badge-purple">Asesor tesis</span>';
-    return '<span class="badge badge-amber">Apoyo curso</span>';
-  };
-  $("tbDocentes").innerHTML = m.docentes_vinculados.detalle.map(d=>`
-    <tr>
-      <td style="font-weight:500">${d.Nombre} ${d.Apellido}</td>
-      <td style="color:#94a3b8;font-size:.76rem">${d.Carrera}</td>
-      <td style="font-size:.76rem">${d.Curso}</td>
-      <td style="color:${NODO_COLOR[d.Nodo]||'#94a3b8'}">${d.Nodo}</td>
-      <td>${tipoApoyo(d)}</td>
-      <td style="color:#64748b;font-size:.76rem">${d.Apoyo}</td>
-    </tr>`).join("");
-
-  // ── EQUIPOS MÁS USADOS ────────────────────────────────────────────────────
-  const eq = m.equipos.ranking;
-  const eqLabels = eq.map(e => e.equipo.length > 22 ? e.equipo.slice(0,20)+"…" : e.equipo);
-
-  mk("cEqAtenciones",{type:"bar",
-    data:{labels:eqLabels,datasets:[{
-      data:eq.map(e=>e.atenciones),
-      backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4
-    }]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} atenciones`}}},
-      scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
-
-  mk("cEqTiempo",{type:"bar",
-    data:{labels:eqLabels,datasets:[{
-      data:eq.map(e=>Math.round(e.tiempo_min/60)),
-      backgroundColor:PALETTE[2]+"cc",borderColor:PALETTE[2],borderWidth:1,borderRadius:4
-    }]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} h`}}},
-      scales:{x:{grid:gc(),ticks:{...tc(),callback:v=>v+"h"},beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
-
-  // ── TASA DE RETORNO ───────────────────────────────────────────────────────
-  const ret = m.retorno;
   $("kpisRetorno").innerHTML=`
-    <div class="kpi c1"><div class="lbl">Alumnos únicos</div><div class="val">${ret.total_alumnos}</div><div class="sub">con al menos una atención</div></div>
-    <div class="kpi c2"><div class="lbl">Recurrentes</div><div class="val">${ret.recurrentes}</div><div class="sub">volvieron más de una vez</div></div>
-    <div class="kpi ca"><div class="lbl">Tasa de retorno</div><div class="val">${ret.tasa_global_pct}%</div><div class="sub">alumnos que repitieron visita</div></div>
-    <div class="kpi c3"><div class="lbl">Máx. visitas</div><div class="val">${ret.max_visitas}</div><div class="sub">por un mismo alumno</div></div>`;
+    <div class="kpi c1"><div class="lbl">Alumnos únicos</div><div class="val">${totalAl}</div><div class="sub">con al menos una atención</div></div>
+    <div class="kpi c2"><div class="lbl">Recurrentes</div><div class="val">${recurrentes}</div><div class="sub">volvieron más de una vez</div></div>
+    <div class="kpi ca"><div class="lbl">Tasa de retorno</div><div class="val">${tasaPct}%</div><div class="sub">alumnos que repitieron visita</div></div>
+    <div class="kpi c3"><div class="lbl">Máx. visitas</div><div class="val">${maxVisitas}</div><div class="sub">por un mismo alumno</div></div>`;
 
-  // Gráfico distribución de frecuencia
-  const freqKeys = Object.keys(ret.frecuencia_dist).sort((a,b)=>
-    (a==="5+"?99:+a)-(b==="5+"?99:+b));
-  const freqLabels = freqKeys.map(k => k==="1" ? "1 visita" : k==="5+" ? "5+ visitas" : `${k} visitas`);
-  mk("cRetornoDist",{type:"bar",
-    data:{labels:freqLabels,datasets:[{
-      data:freqKeys.map(k=>ret.frecuencia_dist[k]),
-      backgroundColor:freqKeys.map((_,i)=>i===0?"#6b728099":(PALETTE[0]+"cc")),
-      borderColor:freqKeys.map((_,i)=>i===0?"#6b7280":PALETTE[0]),
-      borderWidth:1,borderRadius:6
-    }]},
-    options:{responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} alumnos`}}},
-      scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+  // Distribución de frecuencia
+  const freqDist = {};
+  for(const v of visitas.values()){ const k = v<5 ? String(v) : "5+"; freqDist[k]=(freqDist[k]||0)+1; }
+  const freqKeys = Object.keys(freqDist).sort((a,b)=>(a==="5+"?99:+a)-(b==="5+"?99:+b));
+  if(freqKeys.length===0){ emptyMsg("cRetornoDist"); }
+  else{
+    showCanvas("cRetornoDist");
+    const freqLabels = freqKeys.map(k => k==="1" ? "1 visita" : k==="5+" ? "5+ visitas" : `${k} visitas`);
+    mk("cRetornoDist",{type:"bar",
+      data:{labels:freqLabels,datasets:[{
+        data:freqKeys.map(k=>freqDist[k]),
+        backgroundColor:freqKeys.map((_,i)=>i===0?"#6b728099":(PALETTE[0]+"cc")),
+        borderColor:freqKeys.map((_,i)=>i===0?"#6b7280":PALETTE[0]),
+        borderWidth:1,borderRadius:6
+      }]},
+      options:{responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} alumnos`}}},
+        scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:tc(),beginAtZero:true}}}});
+  }
 
-  // Tasa de retorno por nodo (barras horizontales)
-  const retNodos = Object.entries(ret.por_nodo).filter(([,v])=>v.total>0);
-  mk("cRetornoNodo",{type:"bar",
-    data:{labels:retNodos.map(([k])=>k),datasets:[
-      {label:"Recurrentes %",data:retNodos.map(([,v])=>v.tasa_pct),
-       backgroundColor:retNodos.map(([k])=>(NODO_COLOR[k]||"#6b7280")+"cc"),
-       borderColor:retNodos.map(([k])=>NODO_COLOR[k]||"#6b7280"),borderWidth:1,borderRadius:6},
-    ]},
-    options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
-      plugins:{legend:{display:false},tooltip:{callbacks:{
-        label:ctx=>{
-          const [nKey] = retNodos[ctx.dataIndex];
-          const nd = ret.por_nodo[nKey];
-          return ` ${ctx.raw}%  (${nd.recurrentes}/${nd.total})`;
-        }
-      }}},
-      scales:{
-        x:{grid:gc(),ticks:{...tc(),callback:v=>v+"%"},beginAtZero:true,max:100},
-        y:{grid:{display:false},ticks:tc()}
-      }}});
+  // Tasa de retorno por nodo
+  const retNodos = (nodo==="todos"?nodos:[nodo]).map(n=>{
+    const rowsN = alumnosRows.filter(r=>r.nodo===n);
+    const visN = new Map();
+    for(const r of rowsN){ visN.set(r.codigo_hash, (visN.get(r.codigo_hash)||0)+1); }
+    const totalN = visN.size;
+    const recN = [...visN.values()].filter(v=>v>1).length;
+    return {nodo:n, total:totalN, recurrentes:recN, tasa: totalN? Math.round(recN/totalN*1000)/10 : 0};
+  }).filter(x=>x.total>0);
 
-  // ── HEATMAP HORARIO ───────────────────────────────────────────────────────
+  if(retNodos.length===0){ emptyMsg("cRetornoNodo"); }
+  else{
+    showCanvas("cRetornoNodo");
+    mk("cRetornoNodo",{type:"bar",
+      data:{labels:retNodos.map(x=>x.nodo),datasets:[
+        {label:"Recurrentes %",data:retNodos.map(x=>x.tasa),
+         backgroundColor:retNodos.map(x=>(NODO_COLOR[x.nodo]||"#6b7280")+"cc"),
+         borderColor:retNodos.map(x=>NODO_COLOR[x.nodo]||"#6b7280"),borderWidth:1,borderRadius:6},
+      ]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{
+          label:ctx=>{ const nd=retNodos[ctx.dataIndex]; return ` ${ctx.raw}%  (${nd.recurrentes}/${nd.total})`; }
+        }}},
+        scales:{
+          x:{grid:gc(),ticks:{...tc(),callback:v=>v+"%"},beginAtZero:true,max:100},
+          y:{grid:{display:false},ticks:tc()}
+        }}});
+  }
+
+  // ── EQUIPOS ────────────────────────────────────────────────────────────────
+  const eqRows = atAll.filter(r=>r.equipo);
+  const eqAten = sortMapDesc(groupCount(eqRows, "equipo"));
+  const eqTiempo = groupSum(eqRows, "equipo", "tiempo_min");
+
+  if(eqAten.length===0){ emptyMsg("cEqAtenciones"); emptyMsg("cEqTiempo"); }
+  else{
+    showCanvas("cEqAtenciones"); showCanvas("cEqTiempo");
+    const eqLabels = eqAten.map(([k])=>k.length>22?k.slice(0,20)+"…":k);
+    mk("cEqAtenciones",{type:"bar",
+      data:{labels:eqLabels,datasets:[{
+        data:eqAten.map(([,v])=>v),
+        backgroundColor:PALETTE[0]+"cc",borderColor:PALETTE[0],borderWidth:1,borderRadius:4
+      }]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} atenciones`}}},
+        scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+
+    mk("cEqTiempo",{type:"bar",
+      data:{labels:eqLabels,datasets:[{
+        data:eqAten.map(([k])=>Math.round((eqTiempo.get(k)||0)/60)),
+        backgroundColor:PALETTE[2]+"cc",borderColor:PALETTE[2],borderWidth:1,borderRadius:4
+      }]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} h`}}},
+        scales:{x:{grid:gc(),ticks:{...tc(),callback:v=>v+"h"},beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+  }
+
+  // ── HEATMAP HORARIO ────────────────────────────────────────────────────────
   (function(){
-    const hm  = m.heatmap_horario;
-    const dias = hm.dias;
-    const horas = hm.horas.filter(h=>h>=8&&h<=20); // recortar horas marginales
-    const maxV = hm.max_valor;
-
-    // Construir lookup {dia_idx-hora: atenciones}
     const lookup = {};
-    hm.celdas.forEach(c=>{ lookup[c.dia_idx+"-"+c.hora] = c.atenciones; });
-	
-	// --- NUEVO: Calcular totales por día ---
-    const totalesPorDia = new Array(dias.length).fill(0);
-    dias.forEach((_, di) => {
-      horas.forEach(h => {
-        totalesPorDia[di] += (lookup[di+"-"+h] || 0);
-      });
-    });
-    // Obtener el día con mayor cantidad de atenciones (mínimo 1 para evitar dividir por cero)
-    const maxTotalDia = Math.max(...totalesPorDia, 1); 
-    // ---------------------------------------
+    let maxV = 0;
+    for(const r of atAll){
+      if(r.dia_idx>4) continue; // solo Lun-Vie
+      const k = r.dia_idx+"-"+r.hora;
+      lookup[k] = (lookup[k]||0)+1;
+      if(lookup[k]>maxV) maxV = lookup[k];
+    }
+    const horasSet = new Set(atAll.filter(r=>r.dia_idx<=4).map(r=>r.hora));
+    const horas = [...horasSet].sort((a,b)=>a-b).filter(h=>h>=8&&h<=20);
+    maxV = maxV||1;
 
-    // Interpolación de color: de fondo de card (0) a --fab1 (max)
+    const totalesPorDia = DIAS_ORDER.map((_,di)=>{
+      let t=0; horas.forEach(h=>{ t += (lookup[di+"-"+h]||0); }); return t;
+    });
+    const maxTotalDia = Math.max(...totalesPorDia, 1);
+
     function cellColor(v){
       if(!v) return "var(--card)";
       const t = v/maxV;
-      // Azul con opacidad proporcional al valor
       const a = 0.12 + t*0.75;
       return `rgba(59,130,246,${a.toFixed(2)})`;
     }
-    function textColor(v){
-      if(!v) return "var(--muted)";
-      return v/maxV > 0.55 ? "#fff" : "var(--text)";
+    function textColor(v){ if(!v) return "var(--muted)"; return v/maxV > 0.55 ? "#fff" : "var(--text)"; }
+
+    if(horas.length===0 || totalesPorDia.every(t=>t===0)){
+      $("heatmapContainer").innerHTML = `<div class="empty-msg">Sin datos para el filtro seleccionado</div>`;
+      return;
     }
 
-    // Construir tabla HTML
     let tbl = `<table class="hm-table"><thead><tr><th colspan="2"></th>`;
     horas.forEach(h=>{
       const label = h<12 ? h+"am" : h===12 ? "12pm" : (h-12)+"pm";
@@ -643,9 +586,8 @@ function render(nodo, mes){
     });
     tbl += `</tr></thead><tbody>`;
 
-    dias.forEach((dia,di)=>{
+    DIAS_ORDER.forEach((dia,di)=>{
       tbl += `<tr><td class="hm-label-dia">${dia}</td>`;
-	  // --- NUEVO: Construir la celda de la barra ---
       const totalDia = totalesPorDia[di];
       const widthPct = (totalDia / maxTotalDia) * 100;
       tbl += `
@@ -655,7 +597,6 @@ function render(nodo, mes){
             <span class="hm-bar-text">${totalDia > 0 ? totalDia : ''}</span>
           </div>
         </td>`;
-      // ---------------------------------------------
       horas.forEach(h=>{
         const v = lookup[di+"-"+h] || 0;
         const bg = cellColor(v);
@@ -666,25 +607,241 @@ function render(nodo, mes){
       tbl += `</tr>`;
     });
     tbl += `</tbody></table>`;
-
     $("heatmapContainer").innerHTML = tbl;
   })();
+
+  // ── MATERIAL ───────────────────────────────────────────────────────────────
+  function fmtG(v){ return num_format(v, 1) + " g"; }
+
+  // PLA vs Resina (doughnut) — excluye concreto y "Otros"
+  const matNoConcreto = matRows.filter(r=>!r.es_concreto);
+  const matTipoMap = groupSum(matNoConcreto, "material_norm", "material_g");
+  const matPR = ["PLA","Resina"].filter(k=>matTipoMap.has(k)).map(k=>[k,matTipoMap.get(k)]);
+  if(matPR.length===0){ emptyMsg("cMatTipo"); }
+  else{
+    showCanvas("cMatTipo");
+    mk("cMatTipo",{type:"doughnut",
+      data:{labels:matPR.map(([k])=>k),datasets:[{data:matPR.map(([,v])=>v),
+        backgroundColor:["#3b82f6","#10b981"],borderWidth:0}]},
+      options:{responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{...lc(),position:"right"},
+          tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}}}});
+  }
+
+  // Material por tipo de registro (Curso/Proyecto/Tesis) — gramos, excluye concreto
+  const matTregMap = groupSum(matNoConcreto, "tipo_registro", "material_g");
+  const trKeys = [...matTregMap.keys()];
+  if(trKeys.length===0){ emptyMsg("cMatTipoReg"); }
+  else{
+    showCanvas("cMatTipoReg");
+    const trColors = {"Curso":"#6366f1","Proyecto":"#10b981","Tesis":"#f59e0b"};
+    mk("cMatTipoReg",{type:"bar",
+      data:{labels:trKeys,datasets:[{
+        data:trKeys.map(k=>matTregMap.get(k)),
+        backgroundColor:trKeys.map(k=>(trColors[k]||"#6b7280")+"cc"),
+        borderColor:trKeys.map(k=>trColors[k]||"#6b7280"),
+        borderWidth:1,borderRadius:6
+      }]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},
+        tooltip:{callbacks:{label:ctx=>" "+ctx.label+": "+fmtG(ctx.raw)}}},
+        scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),callback:v=>fmtG(v)},beginAtZero:true}}}});
+  }
+
+  // Material por nodo — Fab1/2/3 en g (eje izq), Fab4 en kg (eje der)
+  const matNodoMapNormal = groupSum(matNoConcreto, "nodo", "material_g");
+  const matConcretoNodo = matRows.filter(r=>r.es_concreto);
+  const matFab4Kg = matConcretoNodo.reduce((s,r)=>s+r.material_g,0)/1000;
+
+  const matNodosK = (nodo==="todos"?nodos:[nodo]).filter(n =>
+    (matNodoMapNormal.get(n)||0) > 0 || (n===FAB4 && matFab4Kg>0)
+  );
+
+  if(matNodosK.length===0){ emptyMsg("cMatNodo"); }
+  else{
+    showCanvas("cMatNodo");
+    const matNodoLabels = matNodosK.map(n => n===FAB4 ? n+" (kg)" : n);
+    const dsMatG  = { label:"g", yAxisID:"yG",
+      data: matNodosK.map(n => n===FAB4 ? null : (matNodoMapNormal.get(n)||0)),
+      backgroundColor: matNodosK.map(n=>n===FAB4?"transparent":(NODO_COLOR[n]||"#6b7280")+"cc"),
+      borderColor: matNodosK.map(n=>NODO_COLOR[n]||"#6b7280"), borderWidth:1, borderRadius:6 };
+    const dsMatKg = { label:"kg (Fab4)", yAxisID:"yKg",
+      data: matNodosK.map(n => n===FAB4 ? matFab4Kg : null),
+      backgroundColor: (NODO_COLOR[FAB4]||"#ef4444")+"cc",
+      borderColor: NODO_COLOR[FAB4]||"#ef4444", borderWidth:1, borderRadius:6 };
+    mk("cMatNodo",{type:"bar",
+      data:{labels:matNodoLabels, datasets:[dsMatG, dsMatKg]},
+      options:{responsive:true,maintainAspectRatio:true,
+        plugins:{legend:{display:false},
+          tooltip:{callbacks:{label:ctx=> ctx.dataset.yAxisID==="yKg"
+            ? " Fab4: "+num_format(ctx.raw,1)+" kg"
+            : " "+ctx.label+": "+fmtG(ctx.raw)}}},
+        scales:{
+          x:{grid:{display:false},ticks:tc()},
+          yG: {type:"linear",position:"left", grid:gc(), ticks:{...tc(),callback:v=>v>=1000?(v/1000)+"k g":v+" g"}, beginAtZero:true},
+          yKg:{type:"linear",position:"right",grid:{display:false}, ticks:{...tc(),callback:v=>v+" kg"}, beginAtZero:true}
+        }}});
+  }
+  const unitEl = document.getElementById("matNodoUnit");
+  if(unitEl) unitEl.textContent = "— Fab1/2/3 en g · Fab4 en kg";
+
+  // Tabla material por curso/proyecto/tesis (tabs)
+  function renderMatTable(tab){
+    const rows = matNoConcreto.filter(r=>r.tipo_registro===tab);
+    // pivot por curso_codigo + nombre_curso
+    const agg = new Map();
+    for(const r of rows){
+      const key = r.curso_codigo+"||"+r.nombre_curso;
+      if(!agg.has(key)) agg.set(key, {
+        codigo:r.curso_codigo, nombre:r.nombre_curso,
+        PLA_fab:0, PLA_propio:0, Resina_fab:0, Resina_propio:0, Otros:0
+      });
+      const e = agg.get(key);
+      const esFab = (r.tipo_servicio==="SUBVENCIONADO" || r.tipo_servicio==="CONVENIO");
+      if(r.material_norm==="PLA"){ esFab ? e.PLA_fab+=r.material_g : e.PLA_propio+=r.material_g; }
+      else if(r.material_norm==="Resina"){ esFab ? e.Resina_fab+=r.material_g : e.Resina_propio+=r.material_g; }
+      else { e.Otros += r.material_g; }
+    }
+    const list = [...agg.values()].map(e=>{
+      const total_fab = e.PLA_fab+e.Resina_fab;
+      const total_propio = e.PLA_propio+e.Resina_propio+e.Otros;
+      return {...e, total_fab, total_propio, total: total_fab+total_propio};
+    }).sort((a,b)=>b.total-a.total);
+
+    const maxTotal = list.length ? Math.max(...list.map(r=>r.total)) : 1;
+    if(list.length===0){
+      $("tbMaterial").innerHTML = `<tr class="empty-row"><td colspan="8">Sin datos para el filtro seleccionado</td></tr>`;
+      return;
+    }
+    $("tbMaterial").innerHTML = list.map((r,i)=>{
+      const pct = v => Math.round((v/maxTotal)*80);
+      const fmt = v => v > 0 ? num_format(v, 1) : "—";
+      const barFab = r.total_fab > 0
+        ? `<span class="mat-bar" style="width:${pct(r.total_fab)}px;background:#6366f1"></span>` : "";
+      const badge  = (r.total_propio > 1000 && r.total_fab === 0)
+        ? `<span class="badge badge-amber" title="Alto uso propio — candidato a convenio">★</span> ` : "";
+      return `<tr>
+        <td style="color:#475569;font-size:.75rem">${i + 1}</td>
+        <td><code style="color:#94a3b8;font-size:.74rem">${r.codigo}</code></td>
+        <td style="font-size:.82rem;font-weight:500">${badge}${r.nombre}</td>
+        <td style="text-align:right;color:#3b82f6">${fmt(r.PLA_fab)}</td>
+        <td style="text-align:right;color:#64748b">${fmt(r.PLA_propio)}</td>
+        <td style="text-align:right;color:#10b981">${fmt(r.Resina_fab)}</td>
+		<td style="text-align:right;color:#10b981">${fmt(r.Resina_propio)}</td>
+        <td style="text-align:right;white-space:nowrap">${barFab}<b>${fmt(r.total_fab)}</b></td>
+        <td style="text-align:right;font-weight:600">${fmt(r.total)}</td>
+      </tr>`;
+    }).join("");
+  }
+  renderMatTable(matTab);
+  document.querySelectorAll(".tab-btn").forEach(b=>b.classList.toggle("active", b.dataset.tab===matTab));
+
+  // ── ATENCIONES DOC / JP ───────────────────────────────────────────────────
+  const djMeses = MESES_ORDER.filter(ms=>m.referencia.meses_con_actividad.includes(ms) && (mes==="todos"||mes===ms));
+  if(djMeses.length===0 || docjpRows.length===0){ emptyMsg("cDocJPMes"); }
+  else{
+    showCanvas("cDocJPMes");
+    mk("cDocJPMes",{type:"bar",data:{
+      labels:djMeses,
+      datasets:["DOCENTE","PREDOCENTE"].map((tipo,i)=>({
+        label:tipo,
+        data:djMeses.map(ms=>docjpRows.filter(r=>r.mes===ms && r.tipo_usuario===tipo).length),
+        backgroundColor:[PALETTE[0]+"cc",PALETTE[1]+"cc"][i],
+        borderColor:[PALETTE[0],PALETTE[1]][i],borderWidth:1,borderRadius:4
+      }))
+    },options:{responsive:true,maintainAspectRatio:true,plugins:{legend:lc()},
+      scales:{x:{grid:gc(),ticks:tc(),stacked:true},y:{grid:gc(),ticks:tc(),beginAtZero:true,stacked:true}}}});
+  }
+
+  // ── DOCENTES VINCULADOS ───────────────────────────────────────────────────
+  const convenioCount = docVinc.filter(d=>d.tipo_apoyo==="Convenio").length;
+  const asesorCount   = docVinc.filter(d=>d.tipo_apoyo==="Asesor tesis").length;
+  const apoyoCount    = docVinc.filter(d=>d.tipo_apoyo==="Apoyo curso").length;
+
+  $("kpisDocentes").innerHTML=`
+    <div class="kpi c1"><div class="lbl">Total vinculados</div><div class="val">${nuniq(docVinc,"codigo_hash")}</div><div class="sub">docentes únicos registrados</div></div>
+    <div class="kpi ca"><div class="lbl">Convenio de curso</div><div class="val">${convenioCount}</div><div class="sub">vínculos por convenio</div></div>
+    <div class="kpi c3"><div class="lbl">Asesor de tesis</div><div class="val">${asesorCount}</div><div class="sub">apoyos de asesoría</div></div>
+    <div class="kpi c2"><div class="lbl">Apoyo a curso</div><div class="val">${apoyoCount}</div><div class="sub">otros apoyos registrados</div></div>`;
+
+  const dNodoMap = groupNuniq(m.docentes_vinculados, "nodo", "codigo_hash");
+  const dNodos = (nodo==="todos"?nodos:[nodo]).filter(n=>dNodoMap.has(n));
+  if(dNodos.length===0){ emptyMsg("cDocNodo"); }
+  else{
+    showCanvas("cDocNodo");
+    mk("cDocNodo",{type:"bar",data:{labels:dNodos,datasets:[{data:dNodos.map(n=>dNodoMap.get(n)||0),backgroundColor:dNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:dNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
+  }
+
+  const dCarreraMap = groupNuniq(docVinc, "carrera", "codigo_hash");
+  const dCarreras = sortMapDesc(dCarreraMap).slice(0,8);
+  if(dCarreras.length===0){ emptyMsg("cDocCarrera"); }
+  else{
+    showCanvas("cDocCarrera");
+    mk("cDocCarrera",{type:"bar",data:{labels:dCarreras.map(([k])=>k.length>28?k.slice(0,26)+"…":k),datasets:[{data:dCarreras.map(([,v])=>v),backgroundColor:PALETTE[4]+"cc",borderColor:PALETTE[4],borderWidth:1,borderRadius:4}]},
+      options:{indexAxis:"y",responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+        scales:{x:{grid:gc(),ticks:tc(),beginAtZero:true},y:{grid:{display:false},ticks:tc(10)}}}});
+  }
+
+  // Tabla docentes
+  const tipoApoyoBadge = tipo=>{
+    if(tipo==="Convenio") return '<span class="badge badge-blue">Convenio</span>';
+    if(tipo==="Asesor tesis") return '<span class="badge badge-purple">Asesor tesis</span>';
+    return '<span class="badge badge-amber">Apoyo curso</span>';
+  };
+  if(docVinc.length===0){
+    $("tbDocentes").innerHTML = `<tr class="empty-row"><td colspan="6">Sin datos para el filtro seleccionado</td></tr>`;
+  }else{
+    $("tbDocentes").innerHTML = docVinc.map(d=>`
+      <tr>
+        <td style="font-weight:500">${d.nombre} ${d.apellido}</td>
+        <td style="color:#94a3b8;font-size:.76rem">${d.carrera}</td>
+        <td style="font-size:.76rem">${d.curso}</td>
+        <td style="color:${NODO_COLOR[d.nodo]||'#94a3b8'}">${d.nodo}</td>
+        <td>${tipoApoyoBadge(d.tipo_apoyo)}</td>
+        <td style="color:#64748b;font-size:.76rem">${d.apoyo}</td>
+      </tr>`).join("");
+  }
+
+  // ── CONVENIOS ─────────────────────────────────────────────────────────────
+  const convNodoMap = groupCount(m.convenios, "nodo");
+  const convNodos = (nodo==="todos"?nodos:[nodo]).filter(n=>convNodoMap.has(n));
+  if(convNodos.length===0){ emptyMsg("cConvenios"); }
+  else{
+    showCanvas("cConvenios");
+    mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>convNodoMap.get(n)||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
+      options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
+        scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
+  }
+
+  if(convFiltrados.length===0){
+    $("tbConvenios").innerHTML = `<tr class="empty-row"><td colspan="5">Sin datos para el filtro seleccionado</td></tr>`;
+  }else{
+    $("tbConvenios").innerHTML = convFiltrados.map(d=>`
+      <tr>
+        <td><code style="color:#94a3b8;font-size:.75rem">${d.codigo}</code></td>
+        <td style="font-weight:500">${d.nombre}</td>
+        <td><span style="color:${NODO_COLOR[d.nodo]||'#94a3b8'}">${d.nodo}</span></td>
+        <td style="color:#94a3b8">${d.fecha_convenio}</td>
+        <td style="color:#64748b;font-size:.76rem">${d.notas}</td>
+      </tr>`).join("");
+  }
 }
 
 async function init(){
   M = await load();
   if(!M) return;
 
-  const nodos = M.resumen.nodos||[];
+  const nodos = M.referencia.nodos||[];
   nodos.forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;$("filtroNodo").appendChild(o);});
-  MESES_ORDER.filter(ms=>M.alumnos_asistidos.por_mes[ms]).forEach(ms=>{const o=document.createElement("option");o.value=ms;o.textContent=ms;$("filtroMes").appendChild(o);});
+  MESES_ORDER.filter(ms=>M.referencia.meses_con_actividad.includes(ms)).forEach(ms=>{const o=document.createElement("option");o.value=ms;o.textContent=ms;$("filtroMes").appendChild(o);});
 
-  if(M.resumen.ultima_actualizacion){
-    const d=new Date(M.resumen.ultima_actualizacion);
+  if(M.referencia.ultima_actualizacion){
+    const d=new Date(M.referencia.ultima_actualizacion);
     $("lastUpdate").textContent="Actualizado: "+d.toLocaleString("es-PE",{dateStyle:"medium",timeStyle:"short"});
   }
-  const mesesAct=MESES_ORDER.filter(ms=>M.alumnos_asistidos.por_mes[ms]);
-  $("headerSub").textContent=`${M.resumen.total_usuarios_registrados} usuarios · ${M.convenios.total} convenios · ${mesesAct.join(", ")} 2026`;
+  const mesesAct = MESES_ORDER.filter(ms=>M.referencia.meses_con_actividad.includes(ms));
+  $("headerSub").textContent=`${M.referencia.resumen_usuarios.total_usuarios_registrados} usuarios · ${M.convenios.length} convenios · ${mesesAct.join(", ")} 2026`;
 
   $("loading").style.display="none";
   $("dashboard").style.display="";
@@ -693,6 +850,9 @@ async function init(){
   const onChange=()=>render($("filtroNodo").value,$("filtroMes").value);
   $("filtroNodo").addEventListener("change",onChange);
   $("filtroMes").addEventListener("change",onChange);
+  $("matTabs").addEventListener("click", e=>{
+    if(e.target.dataset.tab){ matTab = e.target.dataset.tab; onChange(); }
+  });
   render("todos","todos");
 }
 
