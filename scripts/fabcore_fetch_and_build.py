@@ -35,7 +35,7 @@ import hashlib
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
 from pathlib import Path
 
 import pandas as pd
@@ -61,19 +61,24 @@ REQUIRED_SHEETS = [
     "CONFIGURACION",
 ]
 
-# Staff → Nodo "por defecto". Ernesto Castro (antes Fab4) ahora se considera
-# Fab3-Digital salvo que la atención sea de un equipo de concreto (ver abajo).
-STAFF_NODO = {
-    "Harold La Chira":   "Fab1-Aditiva",
-    "Diego Quiroz":      "Fab1-Aditiva",
-    "Dario Aylas":       "Fab1-Aditiva",
-    "Mariela Elgegren":  "Fab2-Bioimpresión",
-    "Joaquin Martinez":  "Fab2-Bioimpresión",
-    "Sandra Mozombite":  "Fab3-Digital",
-    "Sofia Franco":      "Fab3-Digital",
-    "Ernesto Castro":    "Fab3-Digital",
-    "Joaquin Dulanto":   "Fab3-Aditiva",
-}
+# Cada entrada: (nombre_staff, nodo, fecha_desde)
+# Las reglas se evalúan en orden; gana la más reciente cuya fecha <= fecha de la atención.
+# "fecha_desde=None" significa "desde siempre" (regla base).
+STAFF_NODO_HISTORY = [
+    # Reglas base (sin fecha límite inferior)
+    ("Harold La Chira",   "Fab1-Aditiva",        None),
+    ("Diego Quiroz",      "Fab1-Aditiva",         None),
+    ("Dario Aylas",       "Fab1-Aditiva",         None),
+    ("Mariela Elgegren",  "Fab2-Bioimpresión",    None),
+    ("Joaquin Martinez",  "Fab2-Bioimpresión",    None),
+    ("Brenda Cárdenas",   "Fab2-Bioimpresión",    None),
+    ("Sandra Mozombite",  "Fab3-Digital",          None),
+    ("Sofia Franco",      "Fab3-Digital",          None),
+    ("Ernesto Castro",    "Fab3-Digital",          None),
+    # Joaquin Dulanto: Fab3 hasta el 14 de junio, Fab1 desde el 15
+    ("Joaquin Dulanto",   "Fab3-Digital",          None),
+    ("Joaquin Dulanto",   "Fab1-Aditiva",          "2026-06-15"),
+]
 
 # Equipos de concreto: cualquier atención que use estos equipos se clasifica
 # como Fab4-Construcción y su material se interpreta en KILOGRAMOS
@@ -179,6 +184,21 @@ def safe_str(v) -> str:
     return str(v)
 
 
+def get_nodo_for_staff(nombre: str, fecha: date) -> str:
+    """Devuelve el nodo vigente para un staff en una fecha dada."""
+    resultado = None
+    fecha_resultado = None
+    for staff, nodo, desde in STAFF_NODO_HISTORY:
+        if staff != nombre:
+            continue
+        desde_date = date.fromisoformat(desde) if desde else date.min
+        if desde_date <= fecha:
+            # Es una regla aplicable; quedarse con la más reciente
+            if fecha_resultado is None or desde_date > fecha_resultado:
+                resultado = nodo
+                fecha_resultado = desde_date
+    return resultado or "Sin asignar"
+
 # ─── 3. Enriquecimiento de DataFrames ────────────────────────────────────────
 
 def enrich_uso(uso: pd.DataFrame, usuarios: pd.DataFrame) -> pd.DataFrame:
@@ -199,7 +219,10 @@ def enrich_uso(uso: pd.DataFrame, usuarios: pd.DataFrame) -> pd.DataFrame:
     # Concreto → Fab4, sin importar el staff asignado
     uso["EsConcreto"] = uso["EquipoNorm"].isin(EQUIPOS_CONCRETO)
 
-    uso["Nodo"] = uso["FabCore Staff"].map(STAFF_NODO).fillna("Sin asignar")
+    uso["Nodo"] = uso.apply(
+        lambda r: get_nodo_for_staff(r["FabCore Staff"], r["Timestamp"].date()),
+        axis=1
+    )
     uso.loc[uso["EsConcreto"], "Nodo"] = "Fab4-Construcción"
 
     uso["CursoCodigo"] = (
