@@ -345,26 +345,61 @@ def build_docentes(docentes: pd.DataFrame) -> list[dict]:
     doc["NodoLimpio"] = doc["Nodo"].astype(str).str.strip().str.replace(" ", "").str.lower()
     doc["NodoNorm"]   = doc["NodoLimpio"].map(NODO_DOC_MAP).fillna(doc["Nodo"])
 
-    def tipo_apoyo(apoyo):
-        a = safe_str(apoyo)
-        if "Convenio" in a or "convenio" in a:
-            return "Convenio"
-        if "asesor" in a.lower():
-            return "Asesor tesis"
+    TIPO_APOYO_ORDER = ["Convenio", "Asesor tesis", "Apoyo curso"]
+    TIPO_LISTADO_ORDER = {"Apoyo curso": 0, "Convenio": 1, "Asesor tesis": 2}
+
+    def classify_apoyo(apoyo):
+        a = safe_str(apoyo).lower()
+        if "convenio" in a: return "Convenio"
+        if "asesor"   in a: return "Asesor tesis"
         return "Apoyo curso"
 
-    rows = []
+    # Key: (codigo, nodo) — agrupa múltiples cursos/apoyos del mismo docente
+    grouped = {}
     for _, r in doc.iterrows():
-        rows.append({
-            "nombre"    : safe_str(r.get("Nombre")),
-            "apellido"  : safe_str(r.get("Apellido")),
-            "carrera"   : safe_str(r.get("Carrera")),
-            "curso"     : safe_str(r.get("Curso")),
-            "nodo"      : r["NodoNorm"],
-            "apoyo"     : safe_str(r.get("Apoyo")),
-            "tipo_apoyo": tipo_apoyo(r.get("Apoyo")),
-            "codigo_hash": hash_codigo(r.get("Codigo", "")),
-        })
+        codigo = safe_str(r.get("Codigo")).strip().lstrip("*")
+        nodo   = r["NodoNorm"]
+        key    = (codigo, nodo)
+
+        if key not in grouped:
+            grouped[key] = {
+                "nombre"      : safe_str(r.get("Nombre")),
+                "apellido"    : safe_str(r.get("Apellido")),
+                "carrera"     : safe_str(r.get("Carrera")),
+                "nodo"        : nodo,
+                "codigo_hash" : hash_codigo(codigo),
+                "cursos"      : [], # lista de {curso, tipo_apoyo, detalle}
+            }
+
+        curso   = safe_str(r.get("Curso"))
+        tipo    = classify_apoyo(r.get("Apoyo"))
+        detalle = safe_str(r.get("Apoyo"))
+
+        entrada = {"curso": curso, "tipo": tipo, "detalle": detalle}
+        if entrada not in grouped[key]["cursos"]:
+            grouped[key]["cursos"].append(entrada)
+
+    # Ordenar cursos por tipo dentro de cada docente y derivar tipo principal
+    rows = []
+    for entry in grouped.values():
+        entry["cursos"].sort(
+            key=lambda c: TIPO_APOYO_ORDER.index(c["tipo"])
+                          if c["tipo"] in TIPO_APOYO_ORDER else 99
+        )
+        tipos_unicos = list(dict.fromkeys(c["tipo"] for c in entry["cursos"]))
+        entry["tipos_apoyo"] = tipos_unicos       # todos los tipos (para badges)
+        entry["tipo_apoyo"] = min(
+            (c["tipo"] for c in entry["cursos"]),
+            key=lambda t: TIPO_LISTADO_ORDER.get(t, 99)
+        )
+        rows.append(entry)
+
+    rows.sort(key=lambda d: (
+        TIPO_LISTADO_ORDER.get(d["tipo_apoyo"], 9),
+        d["nodo"],
+        d["apellido"],
+        d["nombre"]
+    ))
     return rows
 
 

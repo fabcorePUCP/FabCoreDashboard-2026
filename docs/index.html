@@ -235,7 +235,7 @@
         <h3>Listado de docentes vinculados</h3>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Nombre</th><th>Carrera</th><th>Curso</th><th>Nodo</th><th>Tipo de apoyo</th><th>Descripción</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Carrera</th><th>Nodo</th><th>Tipo de apoyo</th><th>Descripción</th></tr></thead>
             <tbody id="tbDocentes"></tbody>
           </table>
         </div>
@@ -789,18 +789,48 @@ function render(nodo, mes){
     if(tipo==="Asesor tesis") return '<span class="badge badge-purple">Asesor tesis</span>';
     return '<span class="badge badge-amber">Apoyo curso</span>';
   };
+  const badgeClass = tipo => ({
+    "Convenio"    : "badge-blue",
+    "Asesor tesis": "badge-purple",
+    "Apoyo curso" : "badge-amber",
+  }[tipo] || "badge-green");
   if(docVinc.length===0){
     $("tbDocentes").innerHTML = `<tr class="empty-row"><td colspan="6">Sin datos para el filtro seleccionado</td></tr>`;
   }else{
-    $("tbDocentes").innerHTML = docVinc.map(d=>`
-      <tr>
-        <td style="font-weight:500">${d.nombre} ${d.apellido}</td>
-        <td style="color:#94a3b8;font-size:.76rem">${d.carrera}</td>
-        <td style="font-size:.76rem">${d.curso}</td>
-        <td style="color:${NODO_COLOR[d.nodo]||'#94a3b8'}">${d.nodo}</td>
-        <td>${tipoApoyoBadge(d.tipo_apoyo)}</td>
-        <td style="color:#64748b;font-size:.76rem">${d.apoyo}</td>
-      </tr>`).join("");
+    $("tbDocentes").innerHTML = docVinc.map(d => {
+	  // Badges de tipos únicos de apoyo
+	  const badgesHTML = d.tipos_apoyo.map(t =>
+		`<span class="badge ${badgeClass(t)}">${t}</span>`
+	  ).join(" ");
+
+	  // Una fila por curso, con código separado del nombre descriptivo
+	  const cursosHTML = d.cursos.map(c => {
+		// Separar código del nombre si tiene formato "1IEE13 - Nombre del curso"
+		const partes = c.curso.split(" - ");
+		const cod    = partes.length > 1 ? partes[0].trim() : "";
+		const nombre = partes.length > 1 ? c.curso.slice(c.curso.indexOf(" - ") + 3) : c.curso;
+
+		return `<div style="display:flex;align-items:baseline;gap:6px;margin-top:3px">
+		  ${cod ? `<code style="color:#6366f1;font-size:.7rem;flex-shrink:0">${cod}</code>` : ""}
+		  <span style="font-size:.75rem;color:#94a3b8">${nombre}</span>
+		  <span class="badge ${badgeClass(c.tipo)}" style="margin-left:auto;flex-shrink:0">${c.tipo}</span>
+		</div>`;
+	  }).join("");
+
+	  return `<tr>
+		<td style="font-weight:500;vertical-align:top;padding-top:10px">
+		  ${d.nombre} ${d.apellido}
+		</td>
+		<td style="color:#94a3b8;font-size:.76rem;vertical-align:top;padding-top:10px">
+		  ${d.carrera}
+		</td>
+		<td style="vertical-align:top;padding-top:10px">
+		  <span style="color:${NODO_COLOR[d.nodo]||'#94a3b8'}">${d.nodo}</span>
+		</td>
+		<td style="vertical-align:top;padding-top:10px">${badgesHTML}</td>
+		<td style="min-width:280px">${cursosHTML}</td>
+	  </tr>`;
+	}).join("");
   }
 
   // ── CONVENIOS ─────────────────────────────────────────────────────────────
