@@ -69,6 +69,7 @@ STAFF_NODO_HISTORY = [
     ("Harold La Chira",   "Fab1-Aditiva",        None),
     ("Diego Quiroz",      "Fab1-Aditiva",         None),
     ("Dario Aylas",       "Fab1-Aditiva",         None),
+    ("Jefferson Castañeda", "Fab1-Aditiva",         None),
     ("Mariela Elgegren",  "Fab2-Bioimpresión",    None),
     ("Joaquin Martinez",  "Fab2-Bioimpresión",    None),
     ("Brenda Cárdenas",   "Fab2-Bioimpresión",    None),
