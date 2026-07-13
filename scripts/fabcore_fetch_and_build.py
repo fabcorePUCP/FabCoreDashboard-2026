@@ -76,15 +76,17 @@ STAFF_NODO_HISTORY = [
     ("Sandra Mozombite",  "Fab3-Digital",          None),
     ("Sofia Franco",      "Fab3-Digital",          None),
     ("Ernesto Castro",    "Fab3-Digital",          None),
+    ("Ernesto Castro",    "Fab3-Digital",          "2026-07-10"),
     # Joaquin Dulanto: Fab3 hasta el 14 de junio, Fab1 desde el 15
     ("Joaquin Dulanto",   "Fab3-Digital",          None),
     ("Joaquin Dulanto",   "Fab1-Aditiva",          "2026-06-15"),
+    ("Tayel Saavedra",    "Fab1-Digital",          None),
 ]
 
 # Equipos de concreto: cualquier atención que use estos equipos se clasifica
 # como Fab4-Construcción y su material se interpreta en KILOGRAMOS
 # (se convierte a gramos ×1000 para mantener unidades consistentes en el JSON).
-EQUIPOS_CONCRETO = {"COLIBRI 1", "COLIBRI 2", "COLIBRI INDUSTRIAL"}
+EQUIPOS_CONCRETO = {"COLIBRÍ 1", "COLIBRÍ 2", "COLIBRÍ INDUSTRIAL", "BRAZO YASKAWA", "MESA DE FLUJO", "BOMBA MAI"}
 
 MESES_ES = {
     1:"Enero", 2:"Febrero", 3:"Marzo", 4:"Abril",
