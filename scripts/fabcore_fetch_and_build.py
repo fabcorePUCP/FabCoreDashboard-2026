@@ -81,6 +81,7 @@ STAFF_NODO_HISTORY = [
     ("Joaquin Dulanto",   "Fab3-Digital",          None),
     ("Joaquin Dulanto",   "Fab1-Aditiva",          "2026-06-15"),
     ("Tayel Saavedra",    "Fab1-Digital",          None),
+    ("Wilder Céspedes",   "Fab3-Digital",          None),
 ]
 
 # Equipos de concreto: cualquier atención que use estos equipos se clasifica
