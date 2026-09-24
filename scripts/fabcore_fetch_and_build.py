@@ -61,6 +61,16 @@ REQUIRED_SHEETS = [
     "CONFIGURACION",
 ]
 
+# Fechas de inicio de cada ciclo académico PUCP (lunes de inicio de clases).
+# Estas fechas cambian cada año — agregar aquí las fechas oficiales de años
+# futuros a medida que se conozcan. El ciclo de una fecha "d" es el de mayor
+# fecha_inicio que sea <= d (misma lógica que STAFF_NODO_HISTORY).
+CICLO_FECHAS_INICIO = [
+    ("2026-0", date(2026, 1, 12)),   # Verano 2026
+    ("2026-1", date(2026, 3, 23)),   # Ciclo 1 2026
+    ("2026-2", date(2026, 8, 17)),   # Ciclo 2 2026
+]
+
 # Cada entrada: (nombre_staff, nodo, fecha_desde)
 # Las reglas se evalúan en orden; gana la más reciente cuya fecha <= fecha de la atención.
 # "fecha_desde=None" significa "desde siempre" (regla base).
@@ -407,25 +417,91 @@ def build_docentes(docentes: pd.DataFrame) -> list[dict]:
     return rows
 
 
-def build_convenios(cursos: pd.DataFrame) -> list[dict]:
-    conv = cursos[cursos["CONVENIO"].astype(str).str.upper() == "SI"].copy()
-    conv["NodoNorm"] = (
-        conv["Nodo"].fillna("Sin asignar").astype(str).str.strip().str.upper()
-        .map(NODO_CURSO_MAP).fillna("Sin asignar")
-    )
-    conv["FECHA INICIO DE CONVENIO"] = pd.to_datetime(
-        conv["FECHA INICIO DE CONVENIO"], dayfirst=True, errors="coerce"
-    ).dt.strftime("%Y-%m-%d").fillna("")
+def ciclo_from_date(d) -> str:
+    """Deriva el ciclo académico PUCP a partir de una fecha, usando las
+    fechas de inicio de ciclo declaradas en CICLO_FECHAS_INICIO (las
+    fechas de inicio cambian cada año para caer en lunes).
+    """
+    if pd.isna(d):
+        return "Sin fecha"
+    fecha = d.date() if hasattr(d, "date") else d
+
+    candidatos = [(nombre, inicio) for nombre, inicio in CICLO_FECHAS_INICIO if inicio <= fecha]
+    if not candidatos:
+        # Fecha anterior a la primera fecha de inicio registrada
+        primero = min(CICLO_FECHAS_INICIO, key=lambda x: x[1])
+        return f"Antes de {primero[0]}"
+
+    nombre, _ = max(candidatos, key=lambda x: x[1])
+    return nombre
+
+
+def build_convenios(cursos: pd.DataFrame, uso: pd.DataFrame) -> list[dict]:
+    """Determina qué cursos tuvieron convenio, y en qué ciclo(s), a partir de
+    la hoja "Registro de Uso": cualquier atención con Tipo de Servicio =
+    "CONVENIO" indica que ese curso tenía convenio vigente en la fecha de esa
+    atención.
+
+    Se usa esta fuente en vez de la columna "FECHA INICIO DE CONVENIO" de
+    "CURSOS PUCP" porque esa fecha se borra manualmente al iniciar cada ciclo
+    nuevo (lo que hacía que el ciclo anterior dejara de reconocerse) y porque
+    un curso con convenio en más de un ciclo debe aparecer en cada uno de
+    ellos, no solo en el último. "CURSOS PUCP" se sigue usando únicamente
+    para completar el nombre oficial y las notas del curso, cuando existen.
+    """
+    conv_rows = uso[
+        uso["Tipo de Servicio"].astype(str).str.strip().str.upper() == "CONVENIO"
+    ].copy()
+    if conv_rows.empty:
+        return []
+
+    conv_rows["Ciclo"] = conv_rows["Timestamp"].apply(ciclo_from_date)
+
+    # Metadata oficial del curso (nombre / notas), cuando exista en CURSOS PUCP
+    meta = cursos.copy()
+    meta["CodigoNorm"] = meta["CODIGO"].astype(str).str.strip().str.upper()
+    meta = meta.drop_duplicates(subset="CodigoNorm", keep="first").set_index("CodigoNorm")
+
+    grouped: dict[tuple[str, str], dict] = {}
+    for _, r in conv_rows.iterrows():
+        codigo = safe_str(r["CursoCodigo"]).strip()
+        if not codigo:
+            continue
+        key = (codigo, r["Ciclo"])
+        if key not in grouped:
+            grouped[key] = {"fechas": [], "nodos": [], "nombre_fallback": r["NombreCurso"]}
+        grouped[key]["fechas"].append(r["Timestamp"])
+        grouped[key]["nodos"].append(r["Nodo"])
 
     rows = []
-    for _, r in conv.iterrows():
+    for (codigo, ciclo), info in grouped.items():
+        codigo_norm = codigo.upper()
+        meta_row = meta.loc[codigo_norm] if codigo_norm in meta.index else None
+
+        nombre = safe_str(meta_row.get("NOMBRE")) if meta_row is not None else ""
+        if not nombre:
+            nombre = info["nombre_fallback"]
+        notas = safe_str(meta_row.get("Notas")) if meta_row is not None else ""
+
+        # Todos los nodos (staff) que atendieron este curso en este ciclo,
+        # no solo el más frecuente — así se ve si un curso se atendió en
+        # más de un nodo dentro del mismo ciclo.
+        nodos_unicos = sorted(
+            set(info["nodos"]),
+            key=lambda n: NODOS.index(n) if n in NODOS else 99
+        )
+
         rows.append({
-            "codigo"        : safe_str(r.get("CODIGO")),
-            "nombre"        : safe_str(r.get("NOMBRE")),
-            "nodo"          : r["NodoNorm"],
-            "fecha_convenio": r["FECHA INICIO DE CONVENIO"],
-            "notas"         : safe_str(r.get("Notas")),
+            "codigo"        : codigo,
+            "nombre"        : nombre,
+            "nodo"          : nodos_unicos,
+            "ciclo"         : ciclo,
+            "fecha_convenio": min(info["fechas"]).strftime("%Y-%m-%d"),
+            "atenciones"    : len(info["fechas"]),
+            "notas"         : notas,
         })
+
+    rows.sort(key=lambda d: (d["ciclo"], d["nodo"][0] if d["nodo"] else "", d["codigo"]))
     return rows
 
 
@@ -447,7 +523,7 @@ def compute_output(sheets: dict) -> dict:
         "atenciones"        : build_atenciones(uso),
         "capacitaciones"    : build_capacitaciones(cap),
         "docentes_vinculados": build_docentes(docentes),
-        "convenios"         : build_convenios(cursos),
+        "convenios"         : build_convenios(cursos, uso),
         "referencia": {
             "nodos"               : NODOS,
             "meses_con_actividad" : meses_con_actividad,

@@ -223,10 +223,18 @@
     </div>
     <div class="charts" style="margin-top:18px">
       <div class="chart-card wide">
-        <h3>Cursos con convenio establecido</h3>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:10px">
+          <h3 style="margin:0">Cursos con convenio establecido</h3>
+          <label style="font-size:.77rem;color:var(--muted);display:flex;align-items:center;gap:7px">
+            Ciclo
+            <select id="filtroCiclo" style="background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:5px 10px;font-size:.8rem;cursor:pointer;min-width:130px">
+              <option value="todos">Todos los ciclos</option>
+            </select>
+          </label>
+        </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Código</th><th>Nombre del curso</th><th>Nodo</th><th>Fecha convenio</th><th>Notas</th></tr></thead>
+            <thead><tr><th>Código</th><th>Nombre del curso</th><th>Nodo</th><th>Ciclo</th><th>Primera atención</th><th style="text-align:right">Atenciones conv.</th><th>Notas</th></tr></thead>
             <tbody id="tbConvenios"></tbody>
           </table>
         </div>
@@ -260,7 +268,7 @@ const MESES_ORDER = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","A
 const DIAS_ORDER  = ["Lunes","Martes","Miércoles","Jueves","Viernes"];
 const FAB4 = "Fab4-Construcción";
 
-let M = null, charts = {}, matTab = "Curso";
+let M = null, charts = {}, matTab = "Curso", cicloFiltro = "todos";
 const $ = id => document.getElementById(id);
 const gc = () => ({color:"rgba(255,255,255,.06)"});
 const tc = (sz=11) => ({color:"#94a3b8",font:{size:sz}});
@@ -369,7 +377,7 @@ function render(nodo, mes){
 
   // Docentes vinculados / convenios — filtrados solo por nodo (no tienen mes)
   const docVinc = nodo==="todos" ? m.docentes_vinculados : m.docentes_vinculados.filter(d=>d.nodo===nodo);
-  const convFiltrados = nodo==="todos" ? m.convenios : m.convenios.filter(c=>c.nodo===nodo);
+  const convFiltrados = nodo==="todos" ? m.convenios : m.convenios.filter(c=>c.nodo.includes(nodo));
 
   // Capacitaciones: alumnos únicos
   const capAlumnos = nuniq(capAll, "codigo_hash");
@@ -379,7 +387,7 @@ function render(nodo, mes){
     <div class="kpi c2"><div class="lbl">Total atenciones</div><div class="val">${atenciones}</div><div class="sub">registros de uso de equipos</div></div>
     <div class="kpi c3"><div class="lbl">Alumnos capacitados</div><div class="val">${capAlumnos}</div><div class="sub">participantes únicos en CAPs</div></div>
     <div class="kpi c4"><div class="lbl">Docentes vinculados</div><div class="val">${docVinc.length}</div><div class="sub">docentes con apoyo registrado</div></div>
-    <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${convFiltrados.length}</div><div class="sub">cursos con convenio activo</div></div>
+    <div class="kpi ca"><div class="lbl">Convenios de curso</div><div class="val">${nuniq(convFiltrados,"codigo")}</div><div class="sub">cursos únicos con convenio activo</div></div>
     <div class="kpi cb"><div class="lbl">Atenciones Doc/JP</div><div class="val">${atencionesDocJP}</div><div class="sub">${docentesUnicos} doc · ${predocUnicos} JP únicos</div></div>
     <div class="kpi cc"><div class="lbl">Material (g)</div><div class="val">${(matNormal/1000).toFixed(1)}kg</div><div class="sub">${num_format(matNormal,0)} g · PLA/Resina/Otros</div></div>
     <div class="kpi cd"><div class="lbl">Tiempo total uso</div><div class="val">${num_format(Math.round(minutos/60))}h</div><div class="sub">horas de uso de equipos</div></div>`;
@@ -392,7 +400,7 @@ function render(nodo, mes){
     const matNormalN = matN.filter(r=>!r.es_concreto).reduce((s,r)=>s+r.material_g,0);
     const matConcretoN = matN.filter(r=>r.es_concreto).reduce((s,r)=>s+r.material_g,0);
     const minN = atN.reduce((s,r)=>s+(r.tiempo_min||0),0);
-    const convN = m.convenios.filter(c=>c.nodo===n).length;
+    const convN = nuniq(m.convenios.filter(c=>c.nodo.includes(n)), "codigo");
     const docN = m.docentes_vinculados.filter(d=>d.nodo===n).length;
 
     const matLabel = matConcretoN>0
@@ -834,25 +842,36 @@ function render(nodo, mes){
   }
 
   // ── CONVENIOS ─────────────────────────────────────────────────────────────
-  const convNodoMap = groupCount(m.convenios, "nodo");
-  const convNodos = (nodo==="todos"?nodos:[nodo]).filter(n=>convNodoMap.has(n));
+  const convNodoMap = new Map();
+  m.convenios.forEach(c=>{
+    c.nodo.forEach(n=>{
+      if(!convNodoMap.has(n)) convNodoMap.set(n, new Set());
+      convNodoMap.get(n).add(c.codigo);
+    });
+  });
+  const convNodoCounts = new Map([...convNodoMap.entries()].map(([n,set])=>[n, set.size]));
+  const convNodos = (nodo==="todos"?nodos:[nodo]).filter(n=>convNodoCounts.has(n));
   if(convNodos.length===0){ emptyMsg("cConvenios"); }
   else{
     showCanvas("cConvenios");
-    mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>convNodoMap.get(n)||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
+    mk("cConvenios",{type:"bar",data:{labels:convNodos,datasets:[{data:convNodos.map(n=>convNodoCounts.get(n)||0),backgroundColor:convNodos.map(n=>(NODO_COLOR[n]||"#6b7280")+"cc"),borderColor:convNodos.map(n=>NODO_COLOR[n]||"#6b7280"),borderWidth:1,borderRadius:8}]},
       options:{responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false}},
         scales:{x:{grid:{display:false},ticks:tc()},y:{grid:gc(),ticks:{...tc(),stepSize:1},beginAtZero:true}}}});
   }
 
-  if(convFiltrados.length===0){
-    $("tbConvenios").innerHTML = `<tr class="empty-row"><td colspan="5">Sin datos para el filtro seleccionado</td></tr>`;
+  const convTabla = cicloFiltro==="todos" ? convFiltrados : convFiltrados.filter(c=>c.ciclo===cicloFiltro);
+
+  if(convTabla.length===0){
+    $("tbConvenios").innerHTML = `<tr class="empty-row"><td colspan="7">Sin datos para el filtro seleccionado</td></tr>`;
   }else{
-    $("tbConvenios").innerHTML = convFiltrados.map(d=>`
+    $("tbConvenios").innerHTML = convTabla.map(d=>`
       <tr>
         <td><code style="color:#94a3b8;font-size:.75rem">${d.codigo}</code></td>
         <td style="font-weight:500">${d.nombre}</td>
-        <td><span style="color:${NODO_COLOR[d.nodo]||'#94a3b8'}">${d.nodo}</span></td>
+        <td>${d.nodo.map(n=>`<span style="color:${NODO_COLOR[n]||'#94a3b8'}">${n}</span>`).join(", ")}</td>
+        <td style="color:#94a3b8">${d.ciclo||'—'}</td>
         <td style="color:#94a3b8">${d.fecha_convenio}</td>
+        <td style="text-align:right;color:#94a3b8">${d.atenciones ?? '—'}</td>
         <td style="color:#64748b;font-size:.76rem">${d.notas}</td>
       </tr>`).join("");
   }
@@ -865,6 +884,16 @@ async function init(){
   const nodos = M.referencia.nodos||[];
   nodos.forEach(n=>{const o=document.createElement("option");o.value=n;o.textContent=n;$("filtroNodo").appendChild(o);});
   MESES_ORDER.filter(ms=>M.referencia.meses_con_actividad.includes(ms)).forEach(ms=>{const o=document.createElement("option");o.value=ms;o.textContent=ms;$("filtroMes").appendChild(o);});
+
+  // Ciclos disponibles (derivados de la fecha de convenio en el worker)
+  const ciclos = [...new Set((M.convenios||[]).map(c=>c.ciclo).filter(Boolean))]
+    .sort((a,b)=>{
+      const esp = s => s==="Sin fecha" || s.startsWith("Antes de");
+      if(esp(a) && !esp(b)) return 1;
+      if(esp(b) && !esp(a)) return -1;
+      return a.localeCompare(b, "es");
+    });
+  ciclos.forEach(c=>{const o=document.createElement("option");o.value=c;o.textContent=c;$("filtroCiclo").appendChild(o);});
 
   if(M.referencia.ultima_actualizacion){
     const d=new Date(M.referencia.ultima_actualizacion);
@@ -883,6 +912,7 @@ async function init(){
   $("matTabs").addEventListener("click", e=>{
     if(e.target.dataset.tab){ matTab = e.target.dataset.tab; onChange(); }
   });
+  $("filtroCiclo").addEventListener("change", e=>{ cicloFiltro = e.target.value; onChange(); });
   render("todos","todos");
 }
 
